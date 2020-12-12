@@ -29,7 +29,7 @@ let App = () => {
 
   // Listen for updates when the app is loaded (and cleanup after ourselves).
   useEffect(() => {
-    const updateStream = new EventSource('http://localhost:6846/api/stdout');
+    const updateStream = new EventSource('http://localhost:6846/api/command/stdout');
     updateStream.onmessage = (event) => {
       if (!event?.data || !(event.data instanceof String)) {
         setError(new InvalidServerEventError());
