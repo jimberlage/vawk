@@ -18,19 +18,21 @@ type RowProps = {
 
 let Row = (props: RowProps) => {
   return (
-    <tr key={`${props.index}:${props.line}`}>
-      {props.line}
+    <tr>
+      <td>
+        {props.line}
+      </td>
     </tr>
   );
 };
 
-type commandFormValues = {
+type changeCommandFormValues = {
   command: String;
 }
 
-let changeCommand = async (values: commandFormValues) => {
-  await fetch('http://localhost:6846/api/command', {
-    method: 'post',
+let changeCommand = (values: changeCommandFormValues) => {
+  fetch('http://localhost:6846/api/command', {
+    method: 'put',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -42,11 +44,40 @@ let ChangeCommandForm = () => {
   return (
     <>
       <Form layout="inline" onFinish={changeCommand}>
-        <Form.Item label="Command">
+        <Form.Item label="Command" name="command">
           <Input />
         </Form.Item>
         <Form.Item>
-          <Button type="primary">Submit</Button>
+          <Button type="primary" htmlType="submit">Submit</Button>
+        </Form.Item>
+      </Form>
+    </>
+  )
+}
+
+type changeInternalFieldSeparatorFormValues = {
+  ifs: String;
+}
+
+let changeInternalFieldSeparator = (values: changeInternalFieldSeparatorFormValues) => {
+  fetch('http://localhost:6846/api/internal-field-separator', {
+    method: 'put',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(values)
+  })
+};
+
+let ChangeInternalFieldSeparatorForm = () => {
+  return (
+    <>
+      <Form layout="inline" onFinish={changeInternalFieldSeparator}>
+        <Form.Item label="IFS" name="internal-field-separator">
+          <Input />
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit">Submit</Button>
         </Form.Item>
       </Form>
     </>
@@ -65,34 +96,37 @@ let App = () => {
   useEffect(() => {
     const updateStream = new EventSource('http://localhost:6846/api/command/stdout');
     updateStream.onmessage = (event) => {
-      if (!event?.data || !(event.data instanceof String)) {
+      if (!event?.data) {
         setError(new InvalidServerEventError());
         return
       }
 
-      setStdout(event.data as string);
+      let data = JSON.parse(event.data);
+
+      if (!data?.stdout) {
+        setError(new InvalidServerEventError());
+        return
+      }
+
+      setStdout(atob(data.stdout as string));
     };
     return () => updateStream.close();
-  });
+  }, [setStdout]);
 
   return (
     <>
-      <input onChange={(event) => {
-        // TODO: Handle invalid input here.
-        // TODO: Handle escaped characters.
-        if (event?.target?.value) {
-          setInternalFieldSeparator(event.target.value);
-        }
-      }} />
       <ChangeCommandForm />
+      {/* TODO: Handle invalid input here. */}
+      {/* TODO: Handle escaped characters. */}
+      <ChangeInternalFieldSeparatorForm />
       <Tabs defaultActiveKey="stdout">
         <TabPane tab="stdout" key="stdout">
           {stdout ?
-            <table>
+            <table className="font-mono">
               <thead></thead>
               <tbody>
                 {stdout?.split(internalFieldSeparator).map((line, index) => (
-                  <Row line={line} index={index} />
+                  <Row key={`${index}:${line}`} line={line} index={index} />
                 ))}
               </tbody>
             </table>
