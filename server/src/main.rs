@@ -4,7 +4,8 @@
 extern crate serde;
 
 use rocket::State;
-use rocket::response::Stream;
+use rocket::request::Request;
+use rocket::response::{self, Responder, Response};
 use rocket_contrib::json::Json;
 use serde::Deserialize;
 use std::io::{self, Cursor, Read};
@@ -68,9 +69,21 @@ impl Read for CommandStream {
     }
 }
 
+impl<'r> Responder<'r> for CommandStream {
+    fn respond_to(self, _: &Request) -> response::Result<'r> {
+        Response::build()
+            .raw_header("Access-Control-Allow-Origin", "*")
+            .raw_header("Cache-Control", "no-cache")
+            .raw_header("Content-Type", "text/event-stream")
+            .raw_header("Expires", "0")
+            .streamed_body(self)
+            .ok()
+    }
+}
+
 #[get("/api/command/stdout")]
-fn stdout(db: State<Arc<Mutex<DB>>>) -> Stream<CommandStream> {
-    Stream::from(CommandStream::new(db.clone()))
+fn stdout(db: State<Arc<Mutex<DB>>>) -> CommandStream {
+    CommandStream::new(db.clone())
 }
 
 #[post("/api/interval", data = "<interval>")]
