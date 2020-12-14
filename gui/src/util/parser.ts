@@ -1,5 +1,9 @@
 /**
- * Contains rules for parsing string data into a table format.
+ * This module contains logic for parsing string data into a table format.
+ *
+ * It primarily exposes the transformData function, which splits a row up according to some basic rules.
+ * Documentation on the rules and the overall design can be found in the comment blocks below; usage examples can be
+ * found in the function docstrings.
  */
 
 /*********************************************************************************************************************
@@ -24,7 +28,11 @@ let parseSeparators = (separatorsStr: string): string[] => {
  * @param separators 
  * @param data 
  */
-let splitLines = (separators: string[], data: string): string[] => {
+let splitData = (separatorsStr: string, data: string): string[] => {
+    if (separatorsStr === "")
+        return [data];
+
+    let separators = parseSeparators(separatorsStr);
     let result = [];
     let currentLine = [];
 
@@ -54,7 +62,7 @@ let splitLines = (separators: string[], data: string): string[] => {
  * - By regex; users can say that they only want lines matching a particular regex.                                  *
  *********************************************************************************************************************/
 
-type RangeRule = (index: number) => boolean;
+type IndexRule = (index: number) => boolean;
 
 const ruleSeparatorMatcher = /(\s+)?,(\s+)?/;
 const rangeMatcher = /(?<lowerBound>\d+)?..(?<upperBound>\d+)?/;
@@ -65,10 +73,13 @@ const indexMatcher = /\d+/;
  * Accepts a single index, or a bounded or unbounded range.
  * Rules may be combined with commas.
  * For example, "1, 3..5, 9.." on a line with 11 parts would match lines [1, 3, 4, 9, 10].
- * @param ruleStr A string of individual numbers and ranges that show where to split another string.
+ * @param indexRulesStr A string of individual numbers and ranges that show where to split another string.
  */
-let parseIndexRules = (ruleStr: string): RangeRule[] => {
-    let individualRules = ruleStr.split(ruleSeparatorMatcher);
+let parseIndexRules = (indexRulesStr: string): IndexRule[] => {
+    if (indexRulesStr === "")
+        return [];
+
+    let individualRules = indexRulesStr.split(ruleSeparatorMatcher);
     let result = [];
 
     for (let rule of individualRules) {
@@ -96,12 +107,56 @@ let parseIndexRules = (ruleStr: string): RangeRule[] => {
     return result;
 };
 
+type RegexRule = (data: string) => boolean;
+
 /**
  * 
  * @param regexStr 
  */
-let parseRegex = (regexStr: string): RegExp => {
-    return new RegExp(regexStr)
+let parseRegexRule = (regexStr: string): RegexRule | undefined => {
+    if (regexStr === "")
+        return undefined;
+
+    try {
+        let regex = new RegExp(regexStr);
+        return (data) => data.search(regex) >= 0;
+    } catch (_) {
+        return undefined;
+    }
 };
 
-export {};
+/**
+ * 
+ * @param regexStr 
+ * @param indexRulesStr 
+ * @param data 
+ */
+let filterData = (regexStr: string, indexRulesStr: string, data: string[]): string[] => {
+    let regexRule = parseRegexRule(regexStr);
+    let indexRules = parseIndexRules(indexRulesStr);
+
+    return data.filter((field, index) => {
+        if (indexRules.length === 0 && !regexRule) {
+            return true;
+        }
+
+        return indexRules.some(indexRule => indexRule(index)) || (!!regexRule && regexRule(field));
+    });
+}
+
+/*********************************************************************************************************************
+ * Transformation of data                                                                                            *
+ *                                                                                                                   *
+ * The transformData function is the public API of this module, and combines a pass for splitting data and a pass    *
+ * for filtering subsets of the data in or out.                                                                      *
+ *                                                                                                                   *
+ * This is suitable for splitting on lines or within a line, the basic transforming steps are the same.              *
+ *********************************************************************************************************************/
+
+let transformData = (separatorStr: string, regexStr: string, indexRulesStr: string, data: string): string[] => {
+    return filterData(regexStr, indexRulesStr, splitData(separatorStr, data));
+}
+
+export {
+    transformData,
+};
