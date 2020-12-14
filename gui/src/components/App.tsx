@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Form, Input, Tabs } from 'antd';
-
 import 'antd/dist/antd.css';
-
-const { TabPane } = Tabs;
 
 class InvalidServerEventError extends Error {
   constructor() {
@@ -115,30 +112,36 @@ let App = () => {
 
   return (
     <>
-      <ChangeCommandForm />
-      {/* TODO: Handle invalid input here. */}
-      {/* TODO: Handle escaped characters. */}
-      <ChangeInternalFieldSeparatorForm />
-      <Tabs defaultActiveKey="stdout">
-        <TabPane tab="stdout" key="stdout">
-          {stdout ?
-            <table className="font-mono">
-              <thead></thead>
-              <tbody>
-                {stdout?.split(internalFieldSeparator).map((line, index) => (
-                  <Row key={`${index}:${line}`} line={line} index={index} />
-                ))}
-              </tbody>
-            </table>
-            :
-            <p>
-              No data to show
-            </p>
-          }
-        </TabPane>
-        <TabPane tab="stderr" key="stderr">
-        </TabPane>
-      </Tabs>
+      <section className="flex flex-row h-screen">
+        <main className="flex-grow">
+          <Tabs defaultActiveKey="stdout">
+            <Tabs.TabPane tab="stdout" key="stdout">
+              {stdout ?
+                <table className="font-mono">
+                  <thead></thead>
+                  <tbody>
+                    {stdout?.split(internalFieldSeparator).map((line, index) => (
+                      <Row key={`${index}:${line}`} line={line} index={index} />
+                    ))}
+                  </tbody>
+                </table>
+                :
+                <p>
+                  No data to show
+                </p>
+              }
+            </Tabs.TabPane>
+            <Tabs.TabPane tab="stderr" key="stderr">
+            </Tabs.TabPane>
+          </Tabs>
+        </main>
+        <aside className="w-1/4">
+          <ChangeCommandForm />
+          {/* TODO: Handle invalid input here. */}
+          {/* TODO: Handle escaped characters. */}
+          <ChangeInternalFieldSeparatorForm />
+        </aside>
+      </section>
     </>
   );
 }
