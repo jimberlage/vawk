@@ -38,8 +38,9 @@ let splitData = (separatorsStr: string, data: string): string[] => {
 
     for (let ch of data) {
         if (separators.includes(ch)) {
-            if (currentLine.length === 0) {
+            if (currentLine.length > 0) {
                 result.push(currentLine.join(""));
+                currentLine = [];
             }
         } else {
             currentLine.push(ch);
@@ -65,7 +66,7 @@ let splitData = (separatorsStr: string, data: string): string[] => {
 type IndexRule = (index: number) => boolean;
 
 const ruleSeparatorMatcher = /(\s+)?,(\s+)?/;
-const rangeMatcher = /(?<lowerBound>\d+)?..(?<upperBound>\d+)?/;
+const rangeMatcher = /(?<lowerBound>\d+)?\.\.(?<upperBound>\d+)?/;
 const indexMatcher = /\d+/;
 
 /**
@@ -84,19 +85,19 @@ let parseIndexRules = (indexRulesStr: string): IndexRule[] => {
 
     for (let rule of individualRules) {
         let rangeMatches = rangeMatcher.exec(rule);
-        if (rangeMatches && rangeMatches.length === 3) {
+        if (rangeMatches && rangeMatches?.groups?.lowerBound && rangeMatches?.groups?.upperBound) {
             // Rules like "0..3" mean all rows >= 0 and < 3.
-            let lowerBound = parseInt(rangeMatches?.groups?.lowerBound as string);
-            let upperBound = parseInt(rangeMatches?.groups?.upperBound as string);
+            let lowerBound = parseInt(rangeMatches.groups.lowerBound);
+            let upperBound = parseInt(rangeMatches.groups.upperBound);
             result.push((index: number) => index >= lowerBound && index < upperBound);
         } else if (rangeMatches && rangeMatches?.groups?.lowerBound) {
             // Rules like "5.." mean all rows >= 5.
-            let lowerBound = parseInt(rangeMatches?.groups.lowerBound);
+            let lowerBound = parseInt(rangeMatches.groups.lowerBound);
             result.push((index: number) => index >= lowerBound);
         } else if (rangeMatches && rangeMatches?.groups?.upperBound) {
             // Rules like "..19" mean all rows < 19.
-            let upperBound = parseInt(rangeMatches?.groups.upperBound);
-            result.push((index: number) => index >= upperBound);
+            let upperBound = parseInt(rangeMatches.groups.upperBound);
+            result.push((index: number) => index < upperBound);
         } else if (indexMatcher.exec(rule)) {
             // Rules like "40" mean the row with an index of 40.
             let specificIndex = parseInt(rule);
@@ -138,9 +139,13 @@ let filterData = (regexStr: string, indexRulesStr: string, data: string[]): stri
     return data.filter((field, index) => {
         if (indexRules.length === 0 && !regexRule) {
             return true;
+        } else if (indexRules.length === 0 && regexRule) {
+            return regexRule(field);
+        } else if (!regexRule) {
+            return indexRules.some(indexRule => indexRule(index));
+        } else {
+            return indexRules.some(indexRule => indexRule(index)) && regexRule(field);
         }
-
-        return indexRules.some(indexRule => indexRule(index)) || (!!regexRule && regexRule(field));
     });
 }
 

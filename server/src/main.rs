@@ -14,7 +14,7 @@ use rocket::State;
 use rocket_contrib::json::Json;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
-use std::io::{self, Cursor, Read};
+use std::io::{self, BufReader, Read, Write};
 use std::process::{self, Output};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -65,7 +65,8 @@ impl<'a> Responder<'a> for CORSPreflightResponder {
         Response::build()
             .status(Status::NoContent)
             .raw_header("Access-Control-Allow-Origin", allowed_origins)
-            .raw_header("Access-Control-Allow-Methods", "OPTIONS, PUT")
+            // TODO: Pass methods in programmatically.
+            .raw_header("Access-Control-Allow-Methods", "OPTIONS, POST, PUT")
             .raw_header("Access-Control-Allow-Headers", "*")
             .raw_header("Access-Control-Max-Age", max_age)
             .header(Connection::keep_alive())
@@ -85,16 +86,19 @@ fn set_command_options() -> CORSPreflightResponder {
 fn set_command(db: State<Arc<Mutex<DB>>>, command: Json<Command>) -> Response {
     let mut db_ref = db.lock().unwrap();
     db_ref.command = Some(command.0);
+    db_ref.last_read = None;
+    drop(db_ref);
+
     let mut response = Response::new();
     response.adjoin_raw_header("Access-Control-Allow-Origin", "*");
     response
 }
 
-struct CommandStream {
+struct CommandInvoker {
     db_ref: Arc<Mutex<DB>>,
 }
 
-impl CommandStream {
+impl CommandInvoker {
     fn new(db_ref: Arc<Mutex<DB>>) -> Self {
         Self {
             db_ref: db_ref.clone(),
@@ -102,8 +106,8 @@ impl CommandStream {
     }
 }
 
-impl Read for CommandStream {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+impl Read for CommandInvoker {
+    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         let db_ref = (*self.db_ref).lock().unwrap();
         let db = db_ref.clone();
         drop(db_ref);
@@ -126,27 +130,43 @@ impl Read for CommandStream {
                 let output = process::Command::new("bash")
                     .args(vec!["-c", &command.command])
                     .output()?;
-                Cursor::new(Message(output).to_server_side_event().unwrap()).read(buf)
+                let data = Message(output).to_server_side_event().unwrap();
+                buf.write_all(&data)?;
+                Ok(data.len())
             }
         };
     }
 }
 
-impl<'r> Responder<'r> for CommandStream {
-    fn respond_to(self, _: &Request) -> response::Result<'r> {
-        Response::build()
-            .raw_header("Access-Control-Allow-Origin", "http://localhost:3000")
-            .raw_header("Cache-Control", "no-cache")
-            .raw_header("Content-Type", "text/event-stream")
-            .raw_header("Expires", "0")
-            .streamed_body(self)
-            .ok()
+#[get("/api/command/output")]
+fn stdout(db: State<Arc<Mutex<DB>>>) -> Response {
+    let reader = BufReader::with_capacity(4294967296, CommandInvoker::new(db.clone()));
+    let mut response = Response::new();
+    response.adjoin_raw_header("Access-Control-Allow-Origin", "http://localhost:3000");
+    response.adjoin_raw_header("Cache-Control", "no-cache");
+    response.adjoin_raw_header("Content-Type", "text/event-stream");
+    response.adjoin_raw_header("Expires", "0");
+    response.set_streamed_body(reader);
+    response
+}
+
+#[options("/api/join")]
+fn join_options() -> CORSPreflightResponder {
+    CORSPreflightResponder {
+        allowed_origins: vec!["http://localhost:3000".to_owned()],
+        max_age: 86400,
     }
 }
 
-#[get("/api/command/stdout")]
-fn stdout(db: State<Arc<Mutex<DB>>>) -> CommandStream {
-    CommandStream::new(db.clone())
+#[post("/api/join")]
+fn join(db: State<Arc<Mutex<DB>>>) -> Response {
+    let mut db_ref = db.lock().unwrap();
+    db_ref.last_read = None;
+    drop(db_ref);
+
+    let mut response = Response::new();
+    response.adjoin_raw_header("Access-Control-Allow-Origin", "*");
+    response
 }
 
 #[options("/api/interval")]
@@ -161,6 +181,8 @@ fn set_interval_options() -> CORSPreflightResponder {
 fn set_interval(db: State<Arc<Mutex<DB>>>, interval: Json<Duration>) -> Response {
     let mut db_ref = db.lock().unwrap();
     db_ref.interval = Some(interval.0);
+    drop(db_ref);
+
     let mut response = Response::new();
     response.adjoin_raw_header("Access-Control-Allow-Origin", "*");
     response
@@ -176,6 +198,8 @@ fn main() {
         .mount(
             "/",
             routes![
+                join,
+                join_options,
                 set_command,
                 set_command_options,
                 set_interval,

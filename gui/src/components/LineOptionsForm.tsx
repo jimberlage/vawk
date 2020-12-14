@@ -2,14 +2,19 @@ import React from 'react';
 import { Input } from 'antd';
 
 type LineOptionsFormProps = {
-    setInternalFieldSeparator: (ifs: string) => void;
-    setLines: (lines: string[]) => void;
+    setIndices: (indicesStr: string) => void;
+    separators: string,
+    setSeparators: (separatorsStr: string) => void;
+    setRegex: (regexStr: string) => void;
 };
 
 let LineOptionsForm = (props: LineOptionsFormProps) => {
     return (
         <>
-            <Input onChange={(event) => props.setInternalFieldSeparator(event.target.value)} />
+            <Input defaultValue={props.separators}
+                   onChange={(event) => props.setSeparators(event.target.value)} />
+            <Input onChange={(event) => props.setRegex(event.target.value)} />
+            <Input onChange={(event) => props.setIndices(event.target.value)} />
         </>
     );
 };
