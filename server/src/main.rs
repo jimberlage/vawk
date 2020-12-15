@@ -1,10 +1,14 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 extern crate base64;
+extern crate nom;
+extern crate regex;
 #[macro_use]
 extern crate rocket;
 extern crate serde;
 extern crate serde_json;
+
+mod parser;
 
 use rocket::http::hyper::header::Connection;
 use rocket::http::Status;
