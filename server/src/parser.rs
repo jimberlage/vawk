@@ -6,6 +6,7 @@ use nom::multi::many0;
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
 use nom::Finish;
 use nom::IResult;
+use regex::{self, Regex};
 use std::collections::HashSet;
 use std::result;
 use std::str::FromStr;
@@ -49,31 +50,51 @@ fn field_separators(input: &str) -> IResult<&str, HashSet<char>> {
     )(input)
 }
 
-fn split(separators_str: &str, data: &str) -> Vec<String> {
-    let (_, separators) = field_separators(separators_str).unwrap();
-    if separators_str.is_empty() {
-        return vec![data.to_owned()];
-    }
+/// splits string data into parts according to the given separators.
+fn split(separators_str: &str, data: &str) -> Result<Vec<String>> {
+    match field_separators(separators_str).finish() {
+        Err(error) => Err((
+            vec![data.to_owned()],
+            TransformationError::InvalidFieldSeparator(error.input.to_owned()),
+        )),
+        Ok((unconsumed_input, separators))
+            if separators.is_empty() && unconsumed_input.is_empty() =>
+        {
+            Ok(vec![data.to_owned()])
+        }
+        Ok((unconsumed_input, separators)) if separators.is_empty() => Err((
+            vec![data.to_owned()],
+            TransformationError::InvalidFieldSeparator(unconsumed_input.to_owned()),
+        )),
+        Ok((unconsumed_input, separators)) => {
+            let mut result = vec![];
+            let mut current_line = vec![];
 
-    let mut result = vec![];
-    let mut current_line = vec![];
+            for c in data.chars() {
+                if separators.contains(&c) {
+                    if current_line.len() > 0 {
+                        result.push(current_line.into_iter().collect());
+                        current_line = vec![];
+                    }
+                } else {
+                    current_line.push(c);
+                }
+            }
 
-    for c in data.chars() {
-        if separators.contains(&c) {
             if current_line.len() > 0 {
                 result.push(current_line.into_iter().collect());
-                current_line = vec![];
             }
-        } else {
-            current_line.push(c);
+
+            if unconsumed_input.is_empty() {
+                Ok(result)
+            } else {
+                Err((
+                    result,
+                    TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
+                ))
+            }
         }
     }
-
-    if current_line.len() == 0 {
-        result.push(current_line.into_iter().collect());
-    }
-
-    result
 }
 
 /*********************************************************************************************************************
@@ -151,7 +172,7 @@ fn index_rules(input: &str) -> IResult<&str, Vec<IndexRule>> {
             combinator::map(tuple((index_rule, index_rule_separator)), |(r, _)| r),
             index_rule,
         ))),
-        space0
+        space0,
     )(input)
 }
 
@@ -162,9 +183,17 @@ fn index_rules(input: &str) -> IResult<&str, Vec<IndexRule>> {
 /// This is **not** a goal of the rest of the code, in general failing fast is preferred unless there is a strong tie to user input.
 fn keep_index_matches(rules_str: &str, data: Vec<String>) -> Result<Vec<String>> {
     match index_rules(rules_str).finish() {
-        Err(error) => Err((data, TransformationError::InvalidIndexRules(error.input.to_owned()))),
-        Ok((unconsumed_input, rules)) if rules.is_empty() && unconsumed_input.is_empty() => Ok(data),
-        Ok((unconsumed_input, rules)) if rules.is_empty() => Err((data, TransformationError::InvalidIndexRules(unconsumed_input.to_owned()))),
+        Err(error) => Err((
+            data,
+            TransformationError::InvalidIndexRules(error.input.to_owned()),
+        )),
+        Ok((unconsumed_input, rules)) if rules.is_empty() && unconsumed_input.is_empty() => {
+            Ok(data)
+        }
+        Ok((unconsumed_input, rules)) if rules.is_empty() => Err((
+            data,
+            TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
+        )),
         Ok((unconsumed_input, rules)) => {
             let mut result = vec![];
 
@@ -177,28 +206,57 @@ fn keep_index_matches(rules_str: &str, data: Vec<String>) -> Result<Vec<String>>
             if unconsumed_input.is_empty() {
                 Ok(result)
             } else {
-                Err((result, TransformationError::InvalidIndexRules(unconsumed_input.to_owned())))
+                Err((
+                    result,
+                    TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
+                ))
             }
         }
     }
 }
 
-pub fn transform(separators_str: &str, rules_str: &str, data: &str) -> Result<Vec<String>> {
-    keep_index_matches(rules_str, split(separators_str, data))
+fn keep_regex_matches(regex_str: &str, data: Vec<String>) -> Result<Vec<String>> {
+    match Regex::new(regex_str) {
+        Err(error) => Err((
+            data,
+            TransformationError::InvalidRegexRule(format!("{}", error)),
+        )),
+        Ok(regex) => Ok(data
+            .iter()
+            .filter(|&field| regex.is_match(field))
+            .map(|field| field.clone())
+            .collect()),
+    }
+}
+
+pub fn transform(separators_str: &str, regex_str: &str, rules_str: &str, data: &str) -> Result<Vec<String>> {
+    let fields = split(separators_str, data)?;
+    let result = keep_index_matches(rules_str, fields)?;
+    keep_regex_matches(regex_str, result)
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     fn owned_string_vec(data: Vec<&str>) -> Vec<String> {
         data.into_iter().map(|s| s.to_owned()).collect()
     }
 
     #[test]
-    fn test_keep_index_matches() {
+    fn split() {
+        // Special characters are parsed correctly.
+        match super::split("\\n\\t", "hi\tthere\tthis\ncould\tbe\tcsv") {
+            Ok(actual) => assert_eq!(
+                actual,
+                owned_string_vec(vec!["hi", "there", "this", "could", "be", "csv"])
+            ),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn keep_index_matches() {
         // The rule "1, 5.." keeps indexes 1, 5, 6, 7, 8.
-        match keep_index_matches(
+        match super::keep_index_matches(
             "1, 5..",
             owned_string_vec(vec![
                 "The", "quick", "brown", "fox", "jumped", "over", "the", "lazy", "dog",
@@ -212,24 +270,51 @@ mod test {
         }
 
         // If the rule is not valid, it is returned in the error.
-        match keep_index_matches(
+        match super::keep_index_matches(
             "thisisnotavalidrule",
             owned_string_vec(vec!["one", "two", "three"]),
         ) {
-            Err((_, TransformationError::InvalidIndexRules(bad_input))) => assert_eq!("thisisnotavalidrule".to_owned(), bad_input),
+            Err((_, super::TransformationError::InvalidIndexRules(bad_input))) => {
+                assert_eq!("thisisnotavalidrule".to_owned(), bad_input)
+            }
             _ => assert!(false),
         }
 
         // The function returns partial results in the case of poor user input, and gives enough data to show the user where parsing failed.
-        match keep_index_matches(
+        match super::keep_index_matches(
             "   1..3, 0fdgdg ",
             owned_string_vec(vec!["one", "two", "three", "four", "five", "six"]),
         ) {
-            Err((actual, TransformationError::InvalidIndexRules(bad_input))) => {
+            Err((actual, super::TransformationError::InvalidIndexRules(bad_input))) => {
                 assert_eq!(actual, owned_string_vec(vec!["one", "two", "three"]));
                 assert_eq!("fdgdg ".to_owned(), bad_input)
-            },
+            }
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn keep_regex_matches() {
+        // Special characters are parsed correctly.
+        match super::keep_regex_matches(
+            "3[0-9]{3}", 
+            owned_string_vec(vec![
+                "COMMAND\tPID\tUSER\tFD\tTYPE\tSIZE/OFF\tNODE\tNAME",
+                "loginwind\t168\tjimberlage\t7u\tIPv4\t0t0\tUDP\t*:5678",
+                "SystemUIS\t343\tjimberlage\t5u\tIPv4\t0t0\tUDP\t*:3100",
+                "SystemUIS\t343\tjimberlage\t8u\tIPv4\t0t0\tUDP\t*:9004",
+                "rapportd\t379\tjimberlage\t4u\tIPv4\t0t0\tTCP\t*:3001 (LISTEN)",
+                "rapportd\t379\tjimberlage\t5u\tIPv6\t0t0\tTCP\t*:3005 (LISTEN)"
+            ])) {
+            Ok(actual) => assert_eq!(
+                actual,
+                owned_string_vec(vec![
+                    "SystemUIS\t343\tjimberlage\t5u\tIPv4\t0t0\tUDP\t*:3100",
+                    "rapportd\t379\tjimberlage\t4u\tIPv4\t0t0\tTCP\t*:3001 (LISTEN)",
+                    "rapportd\t379\tjimberlage\t5u\tIPv6\t0t0\tTCP\t*:3005 (LISTEN)"
+                ])
+            ),
+            Err(_) => assert!(false),
+        }   
     }
 }
