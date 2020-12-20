@@ -21,7 +21,6 @@ use serde::{Deserialize, Serialize};
 use std::io::{self, BufReader, Read, Write};
 use std::process::{self, Output};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 
 struct Message(Output);
 
@@ -53,8 +52,7 @@ struct Command {
 #[derive(Clone, Debug)]
 struct DB {
     command: Option<Command>,
-    interval: Option<Duration>,
-    last_read: Option<Instant>,
+    refresh_requested: bool,
 }
 
 struct CORSPreflightResponder {
@@ -90,7 +88,7 @@ fn set_command_options() -> CORSPreflightResponder {
 fn set_command(db: State<Arc<Mutex<DB>>>, command: Json<Command>) -> Response {
     let mut db_ref = db.lock().unwrap();
     db_ref.command = Some(command.0);
-    db_ref.last_read = None;
+    db_ref.refresh_requested = true;
     drop(db_ref);
 
     let mut response = Response::new();
@@ -116,27 +114,29 @@ impl Read for CommandInvoker {
         let db = db_ref.clone();
         drop(db_ref);
 
-        return match (db.last_read, db.interval, db.command) {
+        return match (db.refresh_requested, db.command) {
+            (false, _) => Ok(0),
             // If there's no command, there's nothing to do.
-            (_, _, None) => Ok(0),
-            // If there is no interval set, and we've already run the command, there's nothing to do.
-            (Some(_), None, _) => Ok(0),
-            // If we've checked before, but not enough time has elapsed yet, there's nothing to do.
-            (Some(last_read), Some(interval), _) if (Instant::now() - last_read) < interval => {
-                Ok(0)
-            }
+            (_, None) => Ok(0),
             // Otherwise, run the command and write its output to the buffer.
-            (_, _, Some(command)) => {
+            (_, Some(command)) => {
                 let mut db_ref = (*self.db_ref).lock().unwrap();
-                db_ref.last_read = Some(Instant::now());
+                db_ref.refresh_requested = false;
                 drop(db_ref);
 
-                let output = process::Command::new("bash")
+                let child = process::Command::new("bash")
                     .args(vec!["-c", &command.command])
-                    .output()?;
-                let data = Message(output).to_server_side_event().unwrap();
-                buf.write_all(&data)?;
-                Ok(data.len())
+                    .spawn()?;
+                match child.stdout.as_mut() {
+                    None => {
+                        Err(io::Error::new(io::ErrorKind::Other, "Could not spawn the command."))
+                    },
+                    Some(stdout) => {
+                        let data = Message(output).to_server_side_event().unwrap();
+                        buf.write_all(&data)?;
+                        Ok(data.len())
+                    },
+                }
             }
         };
     }
@@ -165,26 +165,7 @@ fn join_options() -> CORSPreflightResponder {
 #[post("/api/join")]
 fn join(db: State<Arc<Mutex<DB>>>) -> Response {
     let mut db_ref = db.lock().unwrap();
-    db_ref.last_read = None;
-    drop(db_ref);
-
-    let mut response = Response::new();
-    response.adjoin_raw_header("Access-Control-Allow-Origin", "*");
-    response
-}
-
-#[options("/api/interval")]
-fn set_interval_options() -> CORSPreflightResponder {
-    CORSPreflightResponder {
-        allowed_origins: vec!["http://localhost:3000".to_owned()],
-        max_age: 86400,
-    }
-}
-
-#[put("/api/interval", data = "<interval>")]
-fn set_interval(db: State<Arc<Mutex<DB>>>, interval: Json<Duration>) -> Response {
-    let mut db_ref = db.lock().unwrap();
-    db_ref.interval = Some(interval.0);
+    db_ref.refresh_requested = true;
     drop(db_ref);
 
     let mut response = Response::new();
@@ -196,8 +177,7 @@ fn main() {
     rocket::ignite()
         .manage(Arc::new(Mutex::new(DB {
             command: None,
-            interval: None,
-            last_read: None,
+            refresh_requested: true,
         })))
         .mount(
             "/",
@@ -206,8 +186,6 @@ fn main() {
                 join_options,
                 set_command,
                 set_command_options,
-                set_interval,
-                set_interval_options,
                 stdout
             ],
         )
