@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Form, Input, Tabs } from 'antd';
 import LineOptionsForm from './LineOptionsForm';
-import { transformData } from '../util/parser';
 import 'antd/dist/antd.css';
 
 class InvalidServerEventError extends Error {
@@ -114,7 +113,7 @@ let App = () => {
                   <table className="font-mono table-auto">
                     <thead></thead>
                     <tbody>
-                      {transformData(lineSeparators, lineRegex, lineIndices, stdout || "").map((line, index) => (
+                      {[""].map((line, index) => (
                         <Row key={`${index}:${line}`} line={line} index={index} />
                       ))}
                     </tbody>
