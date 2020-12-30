@@ -8,6 +8,8 @@ extern crate rocket;
 extern crate serde;
 extern crate serde_json;
 
+mod byte_trie;
+mod command;
 mod parser;
 
 use rocket::http::hyper::header::Connection;
@@ -128,14 +130,15 @@ impl Read for CommandInvoker {
                     .args(vec!["-c", &command.command])
                     .spawn()?;
                 match child.stdout.as_mut() {
-                    None => {
-                        Err(io::Error::new(io::ErrorKind::Other, "Could not spawn the command."))
-                    },
+                    None => Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "Could not spawn the command.",
+                    )),
                     Some(stdout) => {
                         let data = Message(output).to_server_side_event().unwrap();
                         buf.write_all(&data)?;
                         Ok(data.len())
-                    },
+                    }
                 }
             }
         };
@@ -181,13 +184,7 @@ fn main() {
         })))
         .mount(
             "/",
-            routes![
-                join,
-                join_options,
-                set_command,
-                set_command_options,
-                stdout
-            ],
+            routes![join, join_options, set_command, set_command_options, stdout],
         )
         .launch();
 }

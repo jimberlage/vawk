@@ -1,3 +1,4 @@
+use byte_trie::{ByteTrie, Membership};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
 use nom::character::complete::{digit1, space0};
@@ -6,10 +7,11 @@ use nom::multi::many0;
 use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
 use nom::Finish;
 use nom::IResult;
-use regex::{self, Regex};
-use std::collections::HashSet;
+use regex::bytes::Regex;
 use std::result;
 use std::str::FromStr;
+
+use crate::byte_trie;
 
 #[derive(Debug)]
 pub enum TransformationError {
@@ -18,7 +20,7 @@ pub enum TransformationError {
     InvalidRegexRule(String),
 }
 
-type Result<T> = result::Result<T, (Vec<String>, TransformationError)>;
+type Result<T> = result::Result<T, TransformationError>;
 
 /*********************************************************************************************************************
  * Rules for separating data                                                                                         *
@@ -31,70 +33,87 @@ type Result<T> = result::Result<T, (Vec<String>, TransformationError)>;
 
 /// escaped_separator handles getting escaped characters from a user-input separator string.
 /// It will treat "\\n", "\\t", "\\r", and "\\s" as the literal characters '\n', '\t', '\r', and ' '.
-fn escaped_field_separator(input: &str) -> IResult<&str, char> {
+fn escaped_field_separator(input: &str) -> IResult<&str, u8> {
     alt((
-        value('\n', tag("\\n")),
-        value('\t', tag("\\t")),
-        value('\r', tag("\\r")),
-        value(' ', tag("\\s")),
+        value(b'\n', tag("\\n")),
+        value(b'\t', tag("\\t")),
+        value(b'\r', tag("\\r")),
+        value(b' ', tag("\\s")),
     ))(input)
 }
 
-fn field_separators(input: &str) -> IResult<&str, HashSet<char>> {
+fn field_separator(input: &str) -> IResult<&str, ByteTrie> {
     combinator::map(
         many0(alt((
-            escaped_field_separator,
-            combinator::map(take(1usize), |s: &str| s.chars().next().unwrap()),
+            combinator::map(escaped_field_separator, |byte| vec![byte]),
+            combinator::map(take(1usize), |s: &str| s.bytes().collect::<Vec<u8>>()),
         ))),
-        |separators| separators.into_iter().collect(),
+        |chars: Vec<Vec<u8>>| {
+            let mut combined = vec![];
+            for char_bytes in chars {
+                combined.append(&mut char_bytes);
+            }
+
+            let mut result = ByteTrie::new();
+            result.insert(&combined);
+            result
+        },
     )(input)
 }
 
-/// splits string data into parts according to the given separators.
-fn split(separators_str: &str, data: &str) -> Result<Vec<String>> {
-    match field_separators(separators_str).finish() {
-        Err(error) => Err((
-            vec![data.to_owned()],
-            TransformationError::InvalidFieldSeparator(error.input.to_owned()),
+/// Parses field separators from a string.
+pub fn parse_field_separator(string_representation: &str) -> Result<ByteTrie> {
+    match field_separator(string_representation).finish() {
+        Err(error) => Err(TransformationError::InvalidFieldSeparator(
+            error.input.to_owned(),
         )),
         Ok((unconsumed_input, separators))
-            if separators.is_empty() && unconsumed_input.is_empty() =>
+            if separators.is_empty() && !unconsumed_input.is_empty() =>
         {
-            Ok(vec![data.to_owned()])
+            Err(TransformationError::InvalidFieldSeparator(
+                unconsumed_input.to_owned(),
+            ))
         }
-        Ok((unconsumed_input, separators)) if separators.is_empty() => Err((
-            vec![data.to_owned()],
-            TransformationError::InvalidFieldSeparator(unconsumed_input.to_owned()),
-        )),
-        Ok((unconsumed_input, separators)) => {
-            let mut result = vec![];
-            let mut current_line = vec![];
+        Ok((_, separators)) => Ok(separators),
+    }
+}
 
-            for c in data.chars() {
-                if separators.contains(&c) {
-                    if current_line.len() > 0 {
-                        result.push(current_line.into_iter().collect());
-                        current_line = vec![];
-                    }
-                } else {
-                    current_line.push(c);
+/// Splits string data into parts according to the given separators.
+fn split(separators: &ByteTrie, data: Vec<u8>) -> Vec<Vec<u8>> {
+    let mut result = vec![];
+    let mut current_line = vec![];
+    let mut current_separator = vec![];
+
+    for byte in data {
+        current_separator.push(byte);
+        match separators.membership(current_separator.as_slice()) {
+            Membership::NotIncluded => {
+                current_line.push(byte);
+                if !current_separator.is_empty() {
+                    current_separator = vec![];
                 }
             }
-
-            if current_line.len() > 0 {
-                result.push(current_line.into_iter().collect());
+            Membership::Included if !current_line.is_empty() => {
+                result.push(current_line);
+                current_line = vec![];
             }
-
-            if unconsumed_input.is_empty() {
-                Ok(result)
-            } else {
-                Err((
-                    result,
-                    TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
-                ))
+            Membership::Included => (),
+            Membership::IncludedAndTerminal if !current_line.is_empty() => {
+                result.push(current_line);
+                current_line = vec![];
+                current_separator = vec![];
             }
-        }
+            Membership::IncludedAndTerminal => {
+                current_separator = vec![];
+            }
+        };
     }
+
+    if !current_line.is_empty() {
+        result.push(current_line);
+    }
+
+    result
 }
 
 /*********************************************************************************************************************
@@ -106,7 +125,8 @@ fn split(separators_str: &str, data: &str) -> Result<Vec<String>> {
  * - By regex; users can say that they only want lines matching a particular regex.                                  *
  *********************************************************************************************************************/
 
-enum IndexRule {
+#[derive(Debug, PartialEq)]
+pub enum IndexRule {
     Bounded(usize, usize),
     LowerBounded(usize),
     UpperBounded(usize),
@@ -176,79 +196,124 @@ fn index_rules(input: &str) -> IResult<&str, Vec<IndexRule>> {
     )(input)
 }
 
+fn parse_index_rules(string_representation: &str) -> Result<Vec<IndexRule>> {
+    match index_rules(string_representation).finish() {
+        Err(error) => Err(TransformationError::InvalidIndexRules(
+            error.input.to_owned(),
+        )),
+        Ok((unconsumed_input, rules)) if rules.is_empty() && !unconsumed_input.is_empty() => Err(
+            TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
+        ),
+        Ok((_, rules)) => Ok(rules),
+    }
+}
+
 /// Parse the rules for indexes, then keep only entries in the data that match the rules given for indexes.
 ///
 /// This function is a bit atypical in that the rules_str argument is expected to be user input, and has purposefully relaxed parsing logic.
 /// It also returns data even in the error case, so that the user still gets some feedback even with invalid input.
 /// This is **not** a goal of the rest of the code, in general failing fast is preferred unless there is a strong tie to user input.
-fn keep_index_matches(rules_str: &str, data: Vec<String>) -> Result<Vec<String>> {
-    match index_rules(rules_str).finish() {
-        Err(error) => Err((
-            data,
-            TransformationError::InvalidIndexRules(error.input.to_owned()),
-        )),
-        Ok((unconsumed_input, rules)) if rules.is_empty() && unconsumed_input.is_empty() => {
-            Ok(data)
-        }
-        Ok((unconsumed_input, rules)) if rules.is_empty() => Err((
-            data,
-            TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
-        )),
-        Ok((unconsumed_input, rules)) => {
-            let mut result = vec![];
+fn keep_index_matches(rules: &Vec<IndexRule>, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let mut result = vec![];
 
-            for i in 0..data.len() {
-                if rules.iter().any(|rule| rule.is_match(i)) {
-                    result.push(data[i].clone());
-                }
-            }
-
-            if unconsumed_input.is_empty() {
-                Ok(result)
-            } else {
-                Err((
-                    result,
-                    TransformationError::InvalidIndexRules(unconsumed_input.to_owned()),
-                ))
-            }
+    for i in 0..data.len() {
+        if rules.iter().any(|rule| rule.is_match(i)) {
+            result.push(data[i].clone());
         }
     }
+
+    result
 }
 
-fn keep_regex_matches(regex_str: &str, data: Vec<String>) -> Result<Vec<String>> {
-    match Regex::new(regex_str) {
-        Err(error) => Err((
-            data,
-            TransformationError::InvalidRegexRule(format!("{}", error)),
-        )),
-        Ok(regex) => Ok(data
-            .iter()
-            .filter(|&field| regex.is_match(field))
-            .map(|field| field.clone())
-            .collect()),
+fn parse_regex_rule(string_representation: &str) -> Result<Regex> {
+    Regex::new(string_representation)
+        .map_err(|error| TransformationError::InvalidRegexRule(format!("{}", error)))
+}
+
+fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    data.into_iter()
+        .filter(|&field| regex.is_match(field.as_slice()))
+        .map(|field| field.clone())
+        .collect()
+}
+
+fn transform_1d(
+    separators: &Option<ByteTrie>,
+    regex: &Option<Regex>,
+    index_rules: &Option<Vec<IndexRule>>,
+    data: Vec<u8>,
+) -> Vec<Vec<u8>> {
+    let mut result = match separators {
+        None => vec![data],
+        Some(separators) => split(separators, data),
+    };
+
+    if let Some(index_rules) = index_rules {
+        result = keep_index_matches(index_rules, result);
     }
+
+    if let Some(regex) = regex {
+        result = keep_regex_matches(regex, result);
+    }
+
+    result
 }
 
-pub fn transform(separators_str: &str, regex_str: &str, rules_str: &str, data: &str) -> Result<Vec<String>> {
-    let fields = split(separators_str, data)?;
-    let result = keep_index_matches(rules_str, fields)?;
-    keep_regex_matches(regex_str, result)
+pub fn transform_2d(
+    line_separators: &Option<ByteTrie>,
+    line_regex: &Option<Regex>,
+    line_index_rules: &Option<Vec<IndexRule>>,
+    row_separators: &Option<ByteTrie>,
+    row_regex: &Option<Regex>,
+    row_index_rules: &Option<Vec<IndexRule>>,
+    data: Vec<u8>,
+) -> Vec<Vec<Vec<u8>>> {
+    transform_1d(line_separators, line_regex, line_index_rules, data)
+        .into_iter()
+        .map(|line| transform_1d(row_separators, row_regex, row_index_rules, line))
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
-    fn owned_string_vec(data: Vec<&str>) -> Vec<String> {
-        data.into_iter().map(|s| s.to_owned()).collect()
+    use crate::byte_trie::ByteTrie;
+    use regex::bytes::Regex;
+
+    fn bytes_vec(data: Vec<&str>) -> Vec<Vec<u8>> {
+        data.into_iter().map(|s| s.bytes().collect()).collect()
+    }
+
+    #[test]
+    fn parse_field_separator() {
+        let mut expected = ByteTrie::new();
+        expected.insert(&[b'\r', b'\n']);
+        match super::parse_field_separator("\\r\\n") {
+            Ok(actual) => assert_eq!(actual, expected),
+            Err(_) => assert!(false),
+        }
     }
 
     #[test]
     fn split() {
         // Special characters are parsed correctly.
-        match super::split("\\n\\t", "hi\tthere\tthis\ncould\tbe\tcsv") {
-            Ok(actual) => assert_eq!(
-                actual,
-                owned_string_vec(vec!["hi", "there", "this", "could", "be", "csv"])
-            ),
+        let mut separators = ByteTrie::new();
+        separators.insert(&[b'\n']);
+        let expected: Vec<Vec<u8>> = bytes_vec(vec!["hi\tthere\tthis", "could\tbe\tcsv"]);
+        let actual = super::split(
+            &separators,
+            "hi\tthere\tthis\ncould\tbe\tcsv".bytes().collect(),
+        );
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn parse_index_rules() {
+        let expected = vec![
+            super::IndexRule::Exact(1usize),
+            super::IndexRule::LowerBounded(5usize),
+        ];
+        match super::parse_index_rules("1, 5..") {
+            Ok(actual) => assert_eq!(actual, expected),
             Err(_) => assert!(false),
         }
     }
@@ -256,65 +321,40 @@ mod test {
     #[test]
     fn keep_index_matches() {
         // The rule "1, 5.." keeps indexes 1, 5, 6, 7, 8.
-        match super::keep_index_matches(
-            "1, 5..",
-            owned_string_vec(vec![
-                "The", "quick", "brown", "fox", "jumped", "over", "the", "lazy", "dog",
-            ]),
-        ) {
-            Ok(actual) => assert_eq!(
-                actual,
-                owned_string_vec(vec!["quick", "over", "the", "lazy", "dog"])
-            ),
-            Err(_) => assert!(false),
-        }
-
-        // If the rule is not valid, it is returned in the error.
-        match super::keep_index_matches(
-            "thisisnotavalidrule",
-            owned_string_vec(vec!["one", "two", "three"]),
-        ) {
-            Err((_, super::TransformationError::InvalidIndexRules(bad_input))) => {
-                assert_eq!("thisisnotavalidrule".to_owned(), bad_input)
-            }
-            _ => assert!(false),
-        }
-
-        // The function returns partial results in the case of poor user input, and gives enough data to show the user where parsing failed.
-        match super::keep_index_matches(
-            "   1..3, 0fdgdg ",
-            owned_string_vec(vec!["one", "two", "three", "four", "five", "six"]),
-        ) {
-            Err((actual, super::TransformationError::InvalidIndexRules(bad_input))) => {
-                assert_eq!(actual, owned_string_vec(vec!["one", "two", "three"]));
-                assert_eq!("fdgdg ".to_owned(), bad_input)
-            }
-            _ => assert!(false),
-        }
+        let data: Vec<Vec<u8>> = bytes_vec(vec![
+            "The", "quick", "brown", "fox", "jumped", "over", "the", "lazy", "dog",
+        ]);
+        let expected: Vec<Vec<u8>> = bytes_vec(vec!["quick", "over", "the", "lazy", "dog"]);
+        let actual = super::keep_index_matches(
+            &vec![
+                super::IndexRule::Exact(1usize),
+                super::IndexRule::LowerBounded(5usize),
+            ],
+            data,
+        );
+        assert_eq!(actual, expected);
     }
 
     #[test]
     fn keep_regex_matches() {
         // Special characters are parsed correctly.
-        match super::keep_regex_matches(
-            "3[0-9]{3}", 
-            owned_string_vec(vec![
+        let regex = Regex::new("3[0-9]{3}").unwrap();
+        let expected = bytes_vec(vec![
+            "SystemUIS\t343\tjimberlage\t5u\tIPv4\t0t0\tUDP\t*:3100",
+            "rapportd\t379\tjimberlage\t4u\tIPv4\t0t0\tTCP\t*:3001 (LISTEN)",
+            "rapportd\t379\tjimberlage\t5u\tIPv6\t0t0\tTCP\t*:3005 (LISTEN)",
+        ]);
+        let actual = super::keep_regex_matches(
+            &regex,
+            bytes_vec(vec![
                 "COMMAND\tPID\tUSER\tFD\tTYPE\tSIZE/OFF\tNODE\tNAME",
                 "loginwind\t168\tjimberlage\t7u\tIPv4\t0t0\tUDP\t*:5678",
                 "SystemUIS\t343\tjimberlage\t5u\tIPv4\t0t0\tUDP\t*:3100",
                 "SystemUIS\t343\tjimberlage\t8u\tIPv4\t0t0\tUDP\t*:9004",
                 "rapportd\t379\tjimberlage\t4u\tIPv4\t0t0\tTCP\t*:3001 (LISTEN)",
-                "rapportd\t379\tjimberlage\t5u\tIPv6\t0t0\tTCP\t*:3005 (LISTEN)"
-            ])) {
-            Ok(actual) => assert_eq!(
-                actual,
-                owned_string_vec(vec![
-                    "SystemUIS\t343\tjimberlage\t5u\tIPv4\t0t0\tUDP\t*:3100",
-                    "rapportd\t379\tjimberlage\t4u\tIPv4\t0t0\tTCP\t*:3001 (LISTEN)",
-                    "rapportd\t379\tjimberlage\t5u\tIPv6\t0t0\tTCP\t*:3005 (LISTEN)"
-                ])
-            ),
-            Err(_) => assert!(false),
-        }   
+                "rapportd\t379\tjimberlage\t5u\tIPv6\t0t0\tTCP\t*:3005 (LISTEN)",
+            ]),
+        );
+        assert_eq!(actual, expected);
     }
 }
