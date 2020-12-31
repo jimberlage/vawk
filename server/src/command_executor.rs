@@ -40,9 +40,8 @@ struct ClientState {
     status: ClientStateStatus,
 }
 
-pub enum InputMessage {
+enum InputMessage {
     Cancel { client_id: String },
-    Connect { client_id: String },
     Run { client_id: String, command: String },
     SetLineIndexFilters { client_id: String, index_filters: Option<Vec<IndexRule>> },
     SetLineRegexFilter { client_id: String, regex_filter: Option<Regex> },
@@ -60,7 +59,7 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn update_status(&mut self, client_id: String, status: ClientStateStatus) {
+    fn update_status(&mut self, client_id: String, status: ClientStateStatus) {
         match self.states.get_mut(&client_id) {
             None => {
                 self.states.insert(client_id, ClientState {
@@ -77,7 +76,15 @@ impl Executor {
         }
     }
 
-    pub fn run(&mut self, client_id: String, command: String) {
+    fn cancel(&mut self, client_id: String) {
+        if let Some(state) = self.states.get_mut(&client_id) {
+            if let ClientStateStatus::Running { child, command: _ } = state.status {
+                child.kill()
+            }
+        }
+    }
+
+    fn run(&mut self, client_id: String, command: String) {
         // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
         match Command::new("bash").args(vec!["-c", &command]).spawn() {
             Err(error) => {
@@ -89,7 +96,7 @@ impl Executor {
         }
     }
 
-    pub fn set_line_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
+    fn set_line_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut line_options = transformers::Options::default();
@@ -107,7 +114,7 @@ impl Executor {
         }
     }
 
-    pub fn set_line_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
+    fn set_line_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut line_options = transformers::Options::default();
@@ -125,7 +132,7 @@ impl Executor {
         }
     }
 
-    pub fn set_line_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
+    fn set_line_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut line_options = transformers::Options::default();
@@ -143,7 +150,7 @@ impl Executor {
         }
     }
 
-    pub fn set_row_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
+    fn set_row_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut row_options = transformers::Options::default();
@@ -161,7 +168,7 @@ impl Executor {
         }
     }
 
-    pub fn set_row_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
+    fn set_row_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut row_options = transformers::Options::default();
@@ -179,7 +186,7 @@ impl Executor {
         }
     }
 
-    pub fn set_row_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
+    fn set_row_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut row_options = transformers::Options::default();
@@ -197,20 +204,68 @@ impl Executor {
         }
     }
 
+    fn try_wait_all(&mut self) {
+        for (client_id, state) in self.states {
+            match state.status {
+                ClientStateStatus::Canceled { child, command: _ } => {
+                    if let Err(error) = child.try_wait() {
+                        match error.kind() {
+                            io::ErrorKind::InvalidInput => (),
+                            _ => self.update_status(client_id, ClientStateStatus::Failed { error }),
+                        }
+                    }
+                },
+                ClientStateStatus::Running { child, command } => {
+                    match child.try_wait() {
+                        Err(error) => self.update_status(client_id, ClientStateStatus::Failed { error }),
+                        Ok(None) => (),
+                        Ok(Some(status)) => {
+                            let stderr = match child.stderr {
+                                None => base64::encode(b""),
+                                Some(stderr) => base64::encode(stderr.into()),
+                            };
+                            let stdout = match child.stdout {
+                                None => Ok(vec![]),
+                                Some(stdout) => {
+                                    let reader = BufReader::new(stdout);
+                                    let mut bytes = vec![];
+                                    match reader.read_to_end(&mut bytes) {
+                                        Err(error) => Err(error),
+                                        _ => Ok(transformers::transform_2d(&state.line_options, &state.row_options, bytes)),
+                                    }
+                                }
+                            };
+                            self.update_status(
+                                client_id,
+                                ClientStateStatus::Finished {
+                                    command,
+                                    status,
+                                    stderr,
+                                    stdout,
+                                },
+                            );
+
+                        },
+                    }
+                },
+                _ => (),
+            };
+        }
+    }
+
     pub fn new() -> Executor {
         let (sender_chan, receiver_chan) = mpsc::channel();
         let mut result = Executor {
             states: HashMap::new(),
             sender_chan,
         };
-        let waiter_thread = thread::spawn(|| {
+        let waiter_thread = thread::spawn(move || {
+            // No operation in this loop should block.
             loop {
-                // Each loop, look for newly connected clients and run their command.
-                // Do not block; move on immediately without waiting.
+                // Change the executor (run commands, set filters, etc.) according to user input.
                 for message in receiver_chan.try_iter() {
                     match message {
-                        InputMessage::Cancel => (),
-                        InputMessage::Connect => (),
+                        InputMessage::Cancel { client_id } => result.cancel(client_id),
                         InputMessage::Run { client_id, command } => result.run(client_id, command),
                         InputMessage::SetLineIndexFilters { client_id, index_filters } => result.set_line_index_filters(client_id, index_filters),
                         InputMessage::SetLineRegexFilter { client_id, regex_filter } => result.set_line_regex_filter(client_id, regex_filter),
@@ -223,42 +278,7 @@ impl Executor {
 
                 // Check for finished commands.
                 // This should ensure that wait() is called for every child process.
-                for (client_id, state) in result.states {
-                    if let ClientState::Running { line_options, row_options, command, child } = state {
-                        match child.try_wait() {
-                            Err(error) => {
-                                result.states.insert(client_id, ClientState::Failed { line_options, row_options, error });
-                            }
-                            Ok(None) => (),
-                            Ok(Some(status)) => {
-                                let stderr = match child.stderr {
-                                    None => base64::encode(b""),
-                                    Some(stderr) => base64::encode(stderr.into()),
-                                };
-                                let stdout = match child.stdout {
-                                    None => Ok(vec![]),
-                                    Some(stdout) => {
-                                        let reader = BufReader::new(stdout);
-                                        let mut bytes = vec![];
-                                        match reader.read_to_end(&mut bytes) {
-                                            Err(error) => Err(error),
-                                            _ => transformers::transform_2d(&line_options, &row_options, bytes),
-                                        };
-                                    }
-                                };
-                                result.states.insert(
-                                    client_id,
-                                    ClientState::Finished {
-                                        command,
-                                        status,
-                                        stderr,
-                                        stdout,
-                                    },
-                                );
-                            }
-                        };
-                    }
-                }
+                result.try_wait_all();
             }
         });
         result

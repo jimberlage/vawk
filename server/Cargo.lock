@@ -924,6 +924,7 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "base64 0.13.0",
+ "log 0.4.11",
  "nom",
  "regex",
  "rocket",

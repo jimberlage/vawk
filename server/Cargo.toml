@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.13"
+log = "0.4"
 nom = "6.0"
 regex = "1.4"
 rocket = { version = "0.4", features = ["sse"] }
