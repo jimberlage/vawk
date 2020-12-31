@@ -15,6 +15,9 @@ use regex::bytes::Regex;
 enum ClientStateStatus {
     Idle,
     Canceled {
+        command: String,
+    },
+    Canceling {
         child: Child,
         command: String,
     },
@@ -29,7 +32,7 @@ enum ClientStateStatus {
         command: String,
         status: ExitStatus,
         stderr: String,
-        stdout: Vec<Vec<String>>,
+        stdout: Vec<Vec<Vec<u8>>>,
     },
 }
 
@@ -79,7 +82,9 @@ impl Executor {
     fn cancel(&mut self, client_id: String) {
         if let Some(state) = self.states.get_mut(&client_id) {
             if let ClientStateStatus::Running { child, command: _ } = state.status {
-                child.kill()
+                if let Err(error) = child.kill() {
+                    self.update_status(client_id, ClientStateStatus::Failed { error });
+                }
             }
         }
     }
@@ -207,13 +212,18 @@ impl Executor {
     fn try_wait_all(&mut self) {
         for (client_id, state) in self.states {
             match state.status {
-                ClientStateStatus::Canceled { child, command: _ } => {
+                ClientStateStatus::Canceling { child, command } => {
                     if let Err(error) = child.try_wait() {
                         match error.kind() {
                             io::ErrorKind::InvalidInput => (),
-                            _ => self.update_status(client_id, ClientStateStatus::Failed { error }),
+                            _ => {
+                                self.update_status(client_id, ClientStateStatus::Failed { error });
+                                continue;
+                            },
                         }
                     }
+
+                    self.update_status(client_id, ClientStateStatus::Canceled { command });
                 },
                 ClientStateStatus::Running { child, command } => {
                     match child.try_wait() {
@@ -222,29 +232,35 @@ impl Executor {
                         Ok(Some(status)) => {
                             let stderr = match child.stderr {
                                 None => base64::encode(b""),
-                                Some(stderr) => base64::encode(stderr.into()),
+                                Some(stderr) => base64::encode(stderr.bytes()),
                             };
-                            let stdout = match child.stdout {
-                                None => Ok(vec![]),
+                            match child.stdout {
+                                None => {
+                                    self.update_status(client_id, ClientStateStatus::Finished {
+                                        command,
+                                        status,
+                                        stderr,
+                                        stdout: vec![],
+                                    });
+                                },
                                 Some(stdout) => {
                                     let reader = BufReader::new(stdout);
                                     let mut bytes = vec![];
                                     match reader.read_to_end(&mut bytes) {
-                                        Err(error) => Err(error),
-                                        _ => Ok(transformers::transform_2d(&state.line_options, &state.row_options, bytes)),
-                                    }
+                                        Err(error) => {
+                                            self.update_status(client_id, ClientStateStatus::Failed { error });
+                                        },
+                                        _ => {
+                                            self.update_status(client_id, ClientStateStatus::Finished {
+                                                command,
+                                                status,
+                                                stderr,
+                                                stdout: transformers::transform_2d(&state.line_options, &state.row_options, bytes),
+                                            });
+                                        },
+                                    };
                                 }
                             };
-                            self.update_status(
-                                client_id,
-                                ClientStateStatus::Finished {
-                                    command,
-                                    status,
-                                    stderr,
-                                    stdout,
-                                },
-                            );
-
                         },
                     }
                 },
