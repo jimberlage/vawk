@@ -1,3 +1,4 @@
+use base64;
 use crate::byte_trie::{ByteTrie, Membership};
 use crate::parsers::IndexRule;
 use regex::bytes::Regex;
@@ -102,6 +103,12 @@ pub fn transform_2d(line_options: &Options, row_options: &Options, data: Vec<u8>
         .into_iter()
         .map(|line| transform_1d(row_options, line))
         .collect()
+}
+
+pub fn encode_2d(data: Vec<Vec<Vec<u8>>>) -> Vec<Vec<String>> {
+    data.into_iter().map(|line| {
+        line.into_iter().map(|row| base64::encode(row)).collect()
+    }).collect()
 }
 
 #[cfg(test)]

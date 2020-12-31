@@ -30,9 +30,10 @@ enum ClientStateStatus {
     },
     Finished {
         command: String,
+        raw_stdout: Vec<u8>,
         status: ExitStatus,
         stderr: String,
-        stdout: Vec<Vec<Vec<u8>>>,
+        stdout: Vec<Vec<String>>,
     },
 }
 
@@ -79,7 +80,7 @@ impl Executor {
         }
     }
 
-    fn cancel(&mut self, client_id: String) {
+    fn handle_cancel(&mut self, client_id: String) {
         if let Some(state) = self.states.get_mut(&client_id) {
             if let ClientStateStatus::Running { child, command: _ } = state.status {
                 if let Err(error) = child.kill() {
@@ -89,7 +90,7 @@ impl Executor {
         }
     }
 
-    fn run(&mut self, client_id: String, command: String) {
+    fn handle_run(&mut self, client_id: String, command: String) {
         // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
         match Command::new("bash").args(vec!["-c", &command]).spawn() {
             Err(error) => {
@@ -101,7 +102,7 @@ impl Executor {
         }
     }
 
-    fn set_line_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
+    fn handle_set_line_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut line_options = transformers::Options::default();
@@ -119,7 +120,7 @@ impl Executor {
         }
     }
 
-    fn set_line_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
+    fn handle_set_line_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut line_options = transformers::Options::default();
@@ -137,7 +138,7 @@ impl Executor {
         }
     }
 
-    fn set_line_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
+    fn handle_set_line_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut line_options = transformers::Options::default();
@@ -155,7 +156,7 @@ impl Executor {
         }
     }
 
-    fn set_row_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
+    fn handle_set_row_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut row_options = transformers::Options::default();
@@ -173,7 +174,7 @@ impl Executor {
         }
     }
 
-    fn set_row_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
+    fn handle_set_row_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut row_options = transformers::Options::default();
@@ -191,7 +192,7 @@ impl Executor {
         }
     }
 
-    fn set_row_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
+    fn handle_set_row_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
         match self.states.get_mut(&client_id) {
             None => {
                 let mut row_options = transformers::Options::default();
@@ -232,12 +233,23 @@ impl Executor {
                         Ok(Some(status)) => {
                             let stderr = match child.stderr {
                                 None => base64::encode(b""),
-                                Some(stderr) => base64::encode(stderr.bytes()),
+                                Some(stderr) => {
+                                    let reader = BufReader::new(stderr);
+                                    let mut bytes = vec![];
+                                    match reader.read_to_end(&mut bytes) {
+                                        Err(error) => {
+                                            self.update_status(client_id, ClientStateStatus::Failed { error });
+                                            continue;
+                                        },
+                                        _ => base64::encode(bytes),
+                                    }
+                                },
                             };
                             match child.stdout {
                                 None => {
                                     self.update_status(client_id, ClientStateStatus::Finished {
                                         command,
+                                        raw_stdout: vec![],
                                         status,
                                         stderr,
                                         stdout: vec![],
@@ -253,9 +265,10 @@ impl Executor {
                                         _ => {
                                             self.update_status(client_id, ClientStateStatus::Finished {
                                                 command,
+                                                raw_stdout: bytes,
                                                 status,
                                                 stderr,
-                                                stdout: transformers::transform_2d(&state.line_options, &state.row_options, bytes),
+                                                stdout: transformers::encode_2d(transformers::transform_2d(&state.line_options, &state.row_options, bytes)),
                                             });
                                         },
                                     };
@@ -281,14 +294,14 @@ impl Executor {
                 // Change the executor (run commands, set filters, etc.) according to user input.
                 for message in receiver_chan.try_iter() {
                     match message {
-                        InputMessage::Cancel { client_id } => result.cancel(client_id),
-                        InputMessage::Run { client_id, command } => result.run(client_id, command),
-                        InputMessage::SetLineIndexFilters { client_id, index_filters } => result.set_line_index_filters(client_id, index_filters),
-                        InputMessage::SetLineRegexFilter { client_id, regex_filter } => result.set_line_regex_filter(client_id, regex_filter),
-                        InputMessage::SetLineSeparator { client_id, separator } => result.set_line_separator(client_id, separator),
-                        InputMessage::SetRowIndexFilters { client_id, index_filters } => result.set_row_index_filters(client_id, index_filters),
-                        InputMessage::SetRowRegexFilter { client_id, regex_filter } => result.set_row_regex_filter(client_id, regex_filter),
-                        InputMessage::SetRowSeparator { client_id, separator } => result.set_row_separator(client_id, separator),
+                        InputMessage::Cancel { client_id } => result.handle_cancel(client_id),
+                        InputMessage::Run { client_id, command } => result.handle_run(client_id, command),
+                        InputMessage::SetLineIndexFilters { client_id, index_filters } => result.handle_set_line_index_filters(client_id, index_filters),
+                        InputMessage::SetLineRegexFilter { client_id, regex_filter } => result.handle_set_line_regex_filter(client_id, regex_filter),
+                        InputMessage::SetLineSeparator { client_id, separator } => result.handle_set_line_separator(client_id, separator),
+                        InputMessage::SetRowIndexFilters { client_id, index_filters } => result.handle_set_row_index_filters(client_id, index_filters),
+                        InputMessage::SetRowRegexFilter { client_id, regex_filter } => result.handle_set_row_regex_filter(client_id, regex_filter),
+                        InputMessage::SetRowSeparator { client_id, separator } => result.handle_set_row_separator(client_id, separator),
                     }
                 }
 
@@ -300,7 +313,11 @@ impl Executor {
         result
     }
 
-    pub fn invoke(&self, client_id: &str, command: &str) {}
+    pub fn run(&self, client_id: &str, command: &str) {
+        self.sender_chan.send(InputMessage::Run { client_id: client_id.into(), command: command.into() }).unwrap();
+    }
 
-    pub fn get(&self, client_id: &str) -> Option<Vec<Message>> {}
+    pub fn cancel(&self, client_id: &str) {
+        self.sender_chan.send(InputMessage::Cancel { client_id: client_id.into() }).unwrap();
+    }
 }
