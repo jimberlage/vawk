@@ -65,3 +65,7 @@ impl ByteTrie {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+}

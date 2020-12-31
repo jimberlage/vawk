@@ -9,8 +9,10 @@ extern crate serde;
 extern crate serde_json;
 
 mod byte_trie;
-mod command;
-mod parser;
+mod command_executor;
+mod parsers;
+mod server;
+mod transformers;
 
 use rocket::http::hyper::header::Connection;
 use rocket::http::Status;
