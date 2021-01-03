@@ -2611,6 +2611,7 @@ dependencies = [
  "chrono",
  "lazy_static",
  "rand 0.6.5",
+ "serde",
 ]
 
 [[package]]
