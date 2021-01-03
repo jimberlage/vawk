@@ -2,27 +2,80 @@
 /// Scaling to large numbers of clients is not an explicit goal of this architecture.
 /// It is intended to robustly support multiple tabs open displaying shble output for a single user.
 use crate::byte_trie::ByteTrie;
-use crate::parsers::IndexRule;
+use crate::parsers::IndexFilter;
 use crate::transformers;
-use std::collections::HashMap;
-use std::io::{self, BufReader, Read};
-use std::process::{Child, Command, ExitStatus};
-use std::sync::mpsc::{self, Sender};
-use std::thread;
-use std::time::Instant;
+use actix::dev::{MessageResponse, ResponseChannel};
+use actix::prelude::*;
+use actix_web;
+use actix_web::web;
+use futures::Stream;
 use regex::bytes::Regex;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::io;
+use std::process::ExitStatus;
+use std::time::Instant;
+use tokio::io::{AsyncReadExt, BufReader};
+use tokio::process::{Child, Command};
+use tokio::sync::mpsc;
+use ulid::Ulid;
 
-enum ClientStateStatus {
+enum Event {
+    StderrChunk,
+    StdoutChunk,
+}
+
+pub struct ClientConnection {
+    client_id: Ulid,
+    receiver: mpsc::Receiver<Event>,
+}
+
+impl ClientConnection {
+    fn new(client_id: Ulid, receiver: mpsc::Receiver<Event>) -> Self {
+        ClientConnection {
+            client_id,
+            receiver,
+        }
+    }
+}
+
+impl<A, M> MessageResponse<A, M> for ClientConnection
+where
+    A: Actor,
+    M: Message<Result = ClientConnection>,
+{
+    fn handle<R: ResponseChannel<M>>(self, _: &mut A::Context, tx: Option<R>) {
+        if let Some(tx) = tx {
+            tx.send(self);
+        }
+    }
+}
+
+impl Stream for ClientConnection {
+    type Item = Result<web::Bytes, actix_web::Error>;
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        todo!()
+    }
+}
+
+enum CommandStatus {
     Idle,
     Canceled {
         command: String,
     },
     Canceling {
-        child: Child,
+        child: Box<Child>,
         command: String,
     },
+    CancellationFailed {
+        error: io::Error,
+    },
     Running {
-        child: Child,
+        child: Box<Child>,
         command: String,
     },
     Failed {
@@ -30,251 +83,143 @@ enum ClientStateStatus {
     },
     Finished {
         command: String,
-        raw_stdout: Vec<u8>,
         status: ExitStatus,
-        stderr: String,
-        stdout: Vec<Vec<String>>,
+        stderr: Vec<u8>,
+        stdout: Vec<u8>,
     },
 }
 
-struct ClientState {
+struct ServerConnection {
     last_active: Instant,
     line_options: transformers::Options,
     row_options: transformers::Options,
-    status: ClientStateStatus,
+    sender: mpsc::Sender<Event>,
+    status: CommandStatus,
 }
 
-enum InputMessage {
-    Cancel { client_id: String },
-    Run { client_id: String, command: String },
-    SetLineIndexFilters { client_id: String, index_filters: Option<Vec<IndexRule>> },
-    SetLineRegexFilter { client_id: String, regex_filter: Option<Regex> },
-    SetLineSeparator { client_id: String, separator: Option<ByteTrie> },
-    SetRowIndexFilters { client_id: String, index_filters: Option<Vec<IndexRule>> },
-    SetRowRegexFilter { client_id: String, regex_filter: Option<Regex> },
-    SetRowSeparator { client_id: String, separator: Option<ByteTrie> },
+impl ServerConnection {
+    fn new(sender: mpsc::Sender<Event>) -> Self {
+        ServerConnection {
+            last_active: Instant::now(),
+            line_options: transformers::Options::default(),
+            row_options: transformers::Options::default(),
+            sender,
+            status: CommandStatus::Idle,
+        }
+    }
 }
 
-pub struct Executor {
-    // Keeps track of multiple client states.
-    // A client can be a browser tab on the same, or a different machine.
-    states: HashMap<String, ClientState>,
-    sender_chan: Sender<InputMessage>,
+pub struct UnconnectedError {}
+
+pub struct CommandExecutor {
+    clients: HashMap<Ulid, ServerConnection>,
 }
 
-impl Executor {
-    fn update_status(&mut self, client_id: String, status: ClientStateStatus) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: transformers::Options::default(),
-                    row_options: transformers::Options::default(),
-                    status,
-                });
-            },
-            Some(state) => {
-                state.last_active = Instant::now();
-                state.status = status;
-            },
+impl CommandExecutor {
+    pub fn new() -> Self {
+        CommandExecutor {
+            clients: HashMap::new(),
         }
     }
 
-    fn handle_cancel(&mut self, client_id: String) {
-        if let Some(state) = self.states.get_mut(&client_id) {
-            if let ClientStateStatus::Running { child, command: _ } = state.status {
-                if let Err(error) = child.kill() {
-                    self.update_status(client_id, ClientStateStatus::Failed { error });
+    /// Generate a unique client ID.
+    fn generate_client_id(&self) -> Ulid {
+        let mut client_id = Ulid::new();
+        while self.clients.contains_key(&client_id) {
+            client_id = Ulid::new();
+        }
+        client_id
+    }
+
+    fn process_output(&self, client_id: &Ulid) -> Result<(), UnconnectedError> {
+        match self.clients.get(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(state) => {
+                if let CommandStatus::Finished {
+                    command: _,
+                    status: _,
+                    stderr: _,
+                    stdout,
+                } = state.status
+                {
+                    let processed =
+                        transformers::transform_2d(&state.line_options, &state.row_options, stdout);
+                    // TODO: Break up into fixed size chunks and send back to the client connection.
                 }
+                Ok(())
             }
         }
     }
 
-    fn handle_run(&mut self, client_id: String, command: String) {
-        // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
-        match Command::new("bash").args(vec!["-c", &command]).spawn() {
-            Err(error) => {
-                self.update_status(client_id, ClientStateStatus::Failed { error });
-            }
-            Ok(child) => {
-                self.update_status(client_id, ClientStateStatus::Running { command, child });
-            }
-        }
-    }
-
-    fn handle_set_line_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                let mut line_options = transformers::Options::default();
-                line_options.index_filters = filters;
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: line_options,
-                    row_options: transformers::Options::default(),
-                    status: ClientStateStatus::Idle,
-                });
-            },
-            Some(state) => {
-                state.line_options.index_filters = filters;
-            }
-        }
-    }
-
-    fn handle_set_line_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                let mut line_options = transformers::Options::default();
-                line_options.regex_filter = filters;
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: line_options,
-                    row_options: transformers::Options::default(),
-                    status: ClientStateStatus::Idle,
-                });
-            },
-            Some(state) => {
-                state.line_options.regex_filter = filters;
-            }
-        }
-    }
-
-    fn handle_set_line_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                let mut line_options = transformers::Options::default();
-                line_options.separators = separator;
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: line_options,
-                    row_options: transformers::Options::default(),
-                    status: ClientStateStatus::Idle,
-                });
-            },
-            Some(state) => {
-                state.line_options.separators = separator;
-            }
-        }
-    }
-
-    fn handle_set_row_index_filters(&mut self, client_id: String, filters: Option<Vec<IndexRule>>) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                let mut row_options = transformers::Options::default();
-                row_options.index_filters = filters;
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: transformers::Options::default(),
-                    row_options: row_options,
-                    status: ClientStateStatus::Idle,
-                });
-            },
-            Some(state) => {
-                state.row_options.index_filters = filters;
-            }
-        }
-    }
-
-    fn handle_set_row_regex_filter(&mut self, client_id: String, filters: Option<Regex>) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                let mut row_options = transformers::Options::default();
-                row_options.regex_filter = filters;
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: transformers::Options::default(),
-                    row_options: row_options,
-                    status: ClientStateStatus::Idle,
-                });
-            },
-            Some(state) => {
-                state.row_options.regex_filter = filters;
-            }
-        }
-    }
-
-    fn handle_set_row_separator(&mut self, client_id: String, separator: Option<ByteTrie>) {
-        match self.states.get_mut(&client_id) {
-            None => {
-                let mut row_options = transformers::Options::default();
-                row_options.separators = separator;
-                self.states.insert(client_id, ClientState {
-                    last_active: Instant::now(),
-                    line_options: transformers::Options::default(),
-                    row_options: row_options,
-                    status: ClientStateStatus::Idle,
-                });
-            },
-            Some(state) => {
-                state.row_options.separators = separator;
-            }
-        }
-    }
-
-    fn try_wait_all(&mut self) {
-        for (client_id, state) in self.states {
-            match state.status {
-                ClientStateStatus::Canceling { child, command } => {
+    async fn wait_for_output(&mut self) {
+        for (client_id, connection) in self.clients.iter_mut() {
+            match connection.status {
+                CommandStatus::Canceling {
+                    ref mut child,
+                    ref command,
+                } => {
                     if let Err(error) = child.try_wait() {
                         match error.kind() {
                             io::ErrorKind::InvalidInput => (),
                             _ => {
-                                self.update_status(client_id, ClientStateStatus::Failed { error });
+                                connection.status = CommandStatus::Failed { error };
                                 continue;
-                            },
+                            }
                         }
                     }
 
-                    self.update_status(client_id, ClientStateStatus::Canceled { command });
-                },
-                ClientStateStatus::Running { child, command } => {
-                    match child.try_wait() {
-                        Err(error) => self.update_status(client_id, ClientStateStatus::Failed { error }),
-                        Ok(None) => (),
-                        Ok(Some(status)) => {
-                            let stderr = match child.stderr {
-                                None => base64::encode(b""),
-                                Some(stderr) => {
-                                    let reader = BufReader::new(stderr);
-                                    let mut bytes = vec![];
-                                    match reader.read_to_end(&mut bytes) {
-                                        Err(error) => {
-                                            self.update_status(client_id, ClientStateStatus::Failed { error });
-                                            continue;
-                                        },
-                                        _ => base64::encode(bytes),
+                    connection.status = CommandStatus::Canceled {
+                        command: command.into(),
+                    };
+                }
+                CommandStatus::Running {
+                    ref mut child,
+                    ref command,
+                } => match child.try_wait() {
+                    Err(error) => {
+                        connection.status = CommandStatus::Failed { error };
+                    }
+                    Ok(None) => (),
+                    Ok(Some(status)) => {
+                        let stderr = match child.stderr {
+                            None => vec![],
+                            Some(ref mut stderr) => {
+                                let mut reader = BufReader::new(stderr);
+                                let mut bytes = vec![];
+                                if let Err(error) = reader.read_to_end(&mut bytes).await {
+                                    connection.status = CommandStatus::Failed { error };
+                                    continue;
+                                };
+                                bytes
+                            }
+                        };
+                        match child.stdout {
+                            None => {
+                                connection.status = CommandStatus::Finished {
+                                    command: command.into(),
+                                    status,
+                                    stderr,
+                                    stdout: vec![],
+                                };
+                            }
+                            Some(ref mut stdout) => {
+                                let mut reader = BufReader::new(stdout);
+                                let mut bytes = vec![];
+                                match reader.read_to_end(&mut bytes).await {
+                                    Err(error) => {
+                                        connection.status = CommandStatus::Failed { error };
                                     }
-                                },
-                            };
-                            match child.stdout {
-                                None => {
-                                    self.update_status(client_id, ClientStateStatus::Finished {
-                                        command,
-                                        raw_stdout: vec![],
-                                        status,
-                                        stderr,
-                                        stdout: vec![],
-                                    });
-                                },
-                                Some(stdout) => {
-                                    let reader = BufReader::new(stdout);
-                                    let mut bytes = vec![];
-                                    match reader.read_to_end(&mut bytes) {
-                                        Err(error) => {
-                                            self.update_status(client_id, ClientStateStatus::Failed { error });
-                                        },
-                                        _ => {
-                                            self.update_status(client_id, ClientStateStatus::Finished {
-                                                command,
-                                                raw_stdout: bytes,
-                                                status,
-                                                stderr,
-                                                stdout: transformers::encode_2d(transformers::transform_2d(&state.line_options, &state.row_options, bytes)),
-                                            });
-                                        },
-                                    };
-                                }
-                            };
-                        },
+                                    _ => {
+                                        connection.status = CommandStatus::Finished {
+                                            command: command.into(),
+                                            status,
+                                            stderr,
+                                            stdout: bytes,
+                                        };
+                                    }
+                                };
+                            }
+                        };
                     }
                 },
                 _ => (),
@@ -282,42 +227,390 @@ impl Executor {
         }
     }
 
-    pub fn new() -> Executor {
-        let (sender_chan, receiver_chan) = mpsc::channel();
-        let mut result = Executor {
-            states: HashMap::new(),
-            sender_chan,
-        };
-        let waiter_thread = thread::spawn(move || {
-            // No operation in this loop should block.
-            loop {
-                // Change the executor (run commands, set filters, etc.) according to user input.
-                for message in receiver_chan.try_iter() {
-                    match message {
-                        InputMessage::Cancel { client_id } => result.handle_cancel(client_id),
-                        InputMessage::Run { client_id, command } => result.handle_run(client_id, command),
-                        InputMessage::SetLineIndexFilters { client_id, index_filters } => result.handle_set_line_index_filters(client_id, index_filters),
-                        InputMessage::SetLineRegexFilter { client_id, regex_filter } => result.handle_set_line_regex_filter(client_id, regex_filter),
-                        InputMessage::SetLineSeparator { client_id, separator } => result.handle_set_line_separator(client_id, separator),
-                        InputMessage::SetRowIndexFilters { client_id, index_filters } => result.handle_set_row_index_filters(client_id, index_filters),
-                        InputMessage::SetRowRegexFilter { client_id, regex_filter } => result.handle_set_row_regex_filter(client_id, regex_filter),
-                        InputMessage::SetRowSeparator { client_id, separator } => result.handle_set_row_separator(client_id, separator),
+    /// Set up a new connection for events related to command execution.
+    fn connect(&mut self) -> ClientConnection {
+        // Connect server to client with a multi-producer, single-consumer FIFO queue.
+        // Tokio's implementation of mpsc queues is used to allow it to play nicely with the runtime.
+        let (sender, receiver) = mpsc::channel(100);
+        // Give the client a unique ID.
+        // While this could technically block for a really long time, in practice the randomness of ULIDs should keep that from happening.
+        let client_id = self.generate_client_id();
+        // Allow the executor to send messages to the client.
+        self.clients
+            .insert(client_id, ServerConnection::new(sender));
+        // And return the connection with its end of the queue, that can be used to stream messages.
+        ClientConnection::new(client_id, receiver)
+    }
+
+    fn run(&self, client_id: &Ulid, command: String) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
+                match Command::new("bash").args(vec!["-c", &command]).spawn() {
+                    Err(error) => {
+                        connection.status = CommandStatus::Failed { error };
+                    }
+                    Ok(child) => {
+                        connection.status = CommandStatus::Running {
+                            command,
+                            child: Box::new(child),
+                        };
+                    }
+                };
+                Ok(())
+            }
+        }
+    }
+
+    fn cancel(&mut self, client_id: &Ulid) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                if let CommandStatus::Running { child, command } = &mut connection.status {
+                    match child.start_kill() {
+                        Err(error) if error.kind() != io::ErrorKind::InvalidInput => {
+                            connection.status = CommandStatus::CancellationFailed { error };
+                        }
+                        _ => {
+                            connection.status = CommandStatus::Canceling {
+                                child: *child,
+                                command: command.clone(),
+                            };
+                        }
                     }
                 }
-
-                // Check for finished commands.
-                // This should ensure that wait() is called for every child process.
-                result.try_wait_all();
+                Ok(())
             }
+        }
+    }
+
+    fn set_line_index_filters(
+        &mut self,
+        client_id: &Ulid,
+        filters: Option<Vec<IndexFilter>>,
+    ) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                connection.line_options.index_filters = filters;
+                Ok(())
+            }
+        }
+    }
+
+    fn set_line_regex_filter(
+        &mut self,
+        client_id: &Ulid,
+        filter: Option<Regex>,
+    ) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                connection.line_options.regex_filter = filter;
+                Ok(())
+            }
+        }
+    }
+
+    fn set_line_separators(
+        &mut self,
+        client_id: &Ulid,
+        separators: Option<ByteTrie>,
+    ) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                connection.line_options.separators = separators;
+                Ok(())
+            }
+        }
+    }
+
+    fn set_row_index_filters(
+        &mut self,
+        client_id: &Ulid,
+        filters: Option<Vec<IndexFilter>>,
+    ) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                connection.row_options.index_filters = filters;
+                Ok(())
+            }
+        }
+    }
+
+    fn set_row_regex_filter(
+        &mut self,
+        client_id: &Ulid,
+        filter: Option<Regex>,
+    ) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                connection.row_options.regex_filter = filter;
+                Ok(())
+            }
+        }
+    }
+
+    fn set_row_separators(
+        &mut self,
+        client_id: &Ulid,
+        separators: Option<ByteTrie>,
+    ) -> Result<(), UnconnectedError> {
+        match self.clients.get_mut(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(connection) => {
+                connection.last_active = Instant::now();
+                connection.row_options.separators = separators;
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Actor for CommandExecutor {
+    type Context = Context<Self>;
+}
+
+// Connection
+
+pub struct Connect {}
+
+impl Message for Connect {
+    type Result = ClientConnection;
+}
+
+impl Handler<Connect> for CommandExecutor {
+    type Result = ClientConnection;
+
+    fn handle(&mut self, _msg: Connect, _ctx: &mut Self::Context) -> ClientConnection {
+        self.connect()
+    }
+}
+
+struct ProcessOutput {
+    client_id: Ulid,
+}
+
+impl Message for ProcessOutput {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<ProcessOutput> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: ProcessOutput,
+        _ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.process_output(&msg.client_id)
+    }
+}
+
+// Run commands
+
+#[derive(Deserialize, Serialize)]
+pub struct Run {
+    client_id: Ulid,
+    command: String,
+}
+
+impl Message for Run {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<Run> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(&mut self, msg: Run, _ctx: &mut Self::Context) -> Result<(), UnconnectedError> {
+        self.run(&msg.client_id, msg.command)
+    }
+}
+
+// Cancel a running command
+
+#[derive(Deserialize, Serialize)]
+pub struct Cancel {
+    client_id: Ulid,
+}
+
+impl Message for Cancel {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<Cancel> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(&mut self, msg: Cancel, _ctx: &mut Self::Context) -> Result<(), UnconnectedError> {
+        self.cancel(&msg.client_id)
+    }
+}
+
+// Setters for settings
+
+#[derive(Deserialize, Serialize)]
+pub struct SetLineIndexFilters {
+    client_id: Ulid,
+    filters: Option<Vec<IndexFilter>>,
+}
+
+impl Message for SetLineIndexFilters {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<SetLineIndexFilters> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: SetLineIndexFilters,
+        ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.set_line_index_filters(&msg.client_id, msg.filters)?;
+        ctx.address().do_send(ProcessOutput {
+            client_id: msg.client_id,
         });
-        result
+        Ok(())
     }
+}
 
-    pub fn run(&self, client_id: &str, command: &str) {
-        self.sender_chan.send(InputMessage::Run { client_id: client_id.into(), command: command.into() }).unwrap();
+#[derive(Deserialize, Serialize)]
+pub struct SetLineRegexFilter {
+    client_id: Ulid,
+    filter: Option<Regex>,
+}
+
+impl Message for SetLineRegexFilter {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<SetLineRegexFilter> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: SetLineRegexFilter,
+        ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.set_line_regex_filter(&msg.client_id, msg.filter)?;
+        ctx.address().do_send(ProcessOutput {
+            client_id: msg.client_id,
+        });
+        Ok(())
     }
+}
 
-    pub fn cancel(&self, client_id: &str) {
-        self.sender_chan.send(InputMessage::Cancel { client_id: client_id.into() }).unwrap();
+#[derive(Deserialize, Serialize)]
+pub struct SetLineSeparators {
+    client_id: Ulid,
+    separators: Option<ByteTrie>,
+}
+
+impl Message for SetLineSeparators {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<SetLineSeparators> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: SetLineSeparators,
+        ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.set_line_separators(&msg.client_id, msg.separators)?;
+        ctx.address().do_send(ProcessOutput {
+            client_id: msg.client_id,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct SetRowIndexFilters {
+    client_id: Ulid,
+    filters: Option<Vec<IndexFilter>>,
+}
+
+impl Message for SetRowIndexFilters {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<SetRowIndexFilters> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: SetRowIndexFilters,
+        ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.set_row_index_filters(&msg.client_id, msg.filters)?;
+        ctx.address().do_send(ProcessOutput {
+            client_id: msg.client_id,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct SetRowRegexFilter {
+    client_id: Ulid,
+    filter: Option<Regex>,
+}
+
+impl Message for SetRowRegexFilter {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<SetRowRegexFilter> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: SetRowRegexFilter,
+        ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.set_row_regex_filter(&msg.client_id, msg.filter)?;
+        ctx.address().do_send(ProcessOutput {
+            client_id: msg.client_id,
+        });
+        Ok(())
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct SetRowSeparators {
+    client_id: Ulid,
+    separators: Option<ByteTrie>,
+}
+
+impl Message for SetRowSeparators {
+    type Result = Result<(), UnconnectedError>;
+}
+
+impl Handler<SetRowSeparators> for CommandExecutor {
+    type Result = Result<(), UnconnectedError>;
+
+    fn handle(
+        &mut self,
+        msg: SetRowSeparators,
+        ctx: &mut Self::Context,
+    ) -> Result<(), UnconnectedError> {
+        self.set_row_separators(&msg.client_id, msg.separators)?;
+        ctx.address().do_send(ProcessOutput {
+            client_id: msg.client_id,
+        });
+        Ok(())
     }
 }

@@ -1,12 +1,12 @@
-use base64;
 use crate::byte_trie::{ByteTrie, Membership};
-use crate::parsers::IndexRule;
+use crate::parsers::IndexFilter;
+use base64;
 use regex::bytes::Regex;
 
 pub struct Options {
     pub separators: Option<ByteTrie>,
     pub regex_filter: Option<Regex>,
-    pub index_filters: Option<Vec<IndexRule>>,
+    pub index_filters: Option<Vec<IndexFilter>>,
 }
 
 impl Options {
@@ -62,7 +62,7 @@ fn split(separators: &ByteTrie, data: Vec<u8>) -> Vec<Vec<u8>> {
 /// This function is a bit atypical in that the rules_str argument is expected to be user input, and has purposefully relaxed parsing logic.
 /// It also returns data even in the error case, so that the user still gets some feedback even with invalid input.
 /// This is **not** a goal of the rest of the code, in general failing fast is preferred unless there is a strong tie to user input.
-fn keep_index_matches(rules: &Vec<IndexRule>, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+fn keep_index_matches(rules: &Vec<IndexFilter>, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let mut result = vec![];
 
     for i in 0..data.len() {
@@ -98,7 +98,11 @@ fn transform_1d(options: &Options, data: Vec<u8>) -> Vec<Vec<u8>> {
     result
 }
 
-pub fn transform_2d(line_options: &Options, row_options: &Options, data: Vec<u8>) -> Vec<Vec<Vec<u8>>> {
+pub fn transform_2d(
+    line_options: &Options,
+    row_options: &Options,
+    data: Vec<u8>,
+) -> Vec<Vec<Vec<u8>>> {
     transform_1d(line_options, data)
         .into_iter()
         .map(|line| transform_1d(row_options, line))
@@ -106,9 +110,9 @@ pub fn transform_2d(line_options: &Options, row_options: &Options, data: Vec<u8>
 }
 
 pub fn encode_2d(data: Vec<Vec<Vec<u8>>>) -> Vec<Vec<String>> {
-    data.into_iter().map(|line| {
-        line.into_iter().map(|row| base64::encode(row)).collect()
-    }).collect()
+    data.into_iter()
+        .map(|line| line.into_iter().map(|row| base64::encode(row)).collect())
+        .collect()
 }
 
 #[cfg(test)]
@@ -142,8 +146,8 @@ mod test {
         let expected: Vec<Vec<u8>> = bytes_vec(vec!["quick", "over", "the", "lazy", "dog"]);
         let actual = super::keep_index_matches(
             &vec![
-                super::IndexRule::Exact(1usize),
-                super::IndexRule::LowerBounded(5usize),
+                super::IndexFilter::Exact(1usize),
+                super::IndexFilter::LowerBounded(5usize),
             ],
             data,
         );
