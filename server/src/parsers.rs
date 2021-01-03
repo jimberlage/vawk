@@ -59,11 +59,11 @@ fn field_separator(input: &str) -> IResult<&str, ByteTrie> {
 }
 
 /// Parses field separators from a string.
-pub fn parse_field_separator(string_representation: &str) -> Result<ByteTrie, InvalidFieldSeparatorError> {
+pub fn parse_field_separator(
+    string_representation: &str,
+) -> Result<ByteTrie, InvalidFieldSeparatorError> {
     match field_separator(string_representation).finish() {
-        Err(error) => {
-            Err(InvalidFieldSeparatorError(error.input.to_owned()))
-        },
+        Err(error) => Err(InvalidFieldSeparatorError(error.input.to_owned())),
         Ok((unconsumed_input, separators))
             if separators.is_empty() && !unconsumed_input.is_empty() =>
         {
@@ -83,20 +83,20 @@ pub fn parse_field_separator(string_representation: &str) -> Result<ByteTrie, In
  *********************************************************************************************************************/
 
 #[derive(Debug, PartialEq)]
-pub enum IndexRule {
+pub enum IndexFilter {
     Bounded(usize, usize),
     LowerBounded(usize),
     UpperBounded(usize),
     Exact(usize),
 }
 
-impl IndexRule {
+impl IndexFilter {
     pub fn is_match(&self, i: usize) -> bool {
         match self {
-            IndexRule::Bounded(lower, upper) => i >= *lower && i < *upper,
-            IndexRule::LowerBounded(lower) => i >= *lower,
-            IndexRule::UpperBounded(upper) => i < *upper,
-            IndexRule::Exact(j) => i == *j,
+            IndexFilter::Bounded(lower, upper) => i >= *lower && i < *upper,
+            IndexFilter::LowerBounded(lower) => i >= *lower,
+            IndexFilter::UpperBounded(upper) => i < *upper,
+            IndexFilter::Exact(j) => i == *j,
         }
     }
 }
@@ -105,29 +105,29 @@ fn index(input: &str) -> IResult<&str, usize> {
     combinator::map(digit1, |s: &str| usize::from_str(s).unwrap())(input)
 }
 
-fn bounded(input: &str) -> IResult<&str, IndexRule> {
+fn bounded(input: &str) -> IResult<&str, IndexFilter> {
     combinator::map(separated_pair(index, tag(".."), index), |(lower, upper)| {
-        IndexRule::Bounded(lower, upper)
+        IndexFilter::Bounded(lower, upper)
     })(input)
 }
 
-fn lower_bounded(input: &str) -> IResult<&str, IndexRule> {
+fn lower_bounded(input: &str) -> IResult<&str, IndexFilter> {
     combinator::map(terminated(index, tag("..")), |lower| {
-        IndexRule::LowerBounded(lower)
+        IndexFilter::LowerBounded(lower)
     })(input)
 }
 
-fn upper_bounded(input: &str) -> IResult<&str, IndexRule> {
+fn upper_bounded(input: &str) -> IResult<&str, IndexFilter> {
     combinator::map(preceded(tag(".."), index), |upper| {
-        IndexRule::UpperBounded(upper)
+        IndexFilter::UpperBounded(upper)
     })(input)
 }
 
-fn exact(input: &str) -> IResult<&str, IndexRule> {
-    combinator::map(index, |i| IndexRule::Exact(i))(input)
+fn exact(input: &str) -> IResult<&str, IndexFilter> {
+    combinator::map(index, |i| IndexFilter::Exact(i))(input)
 }
 
-fn index_rule(input: &str) -> IResult<&str, IndexRule> {
+fn index_rule(input: &str) -> IResult<&str, IndexFilter> {
     alt((bounded, lower_bounded, upper_bounded, exact))(input)
 }
 
@@ -142,7 +142,7 @@ fn index_rule_separator(input: &str) -> IResult<&str, ()> {
 /// 2. Bounded: "6..10" matches rows where the index is >= 6 and < 10.
 /// 3. Lower bounded: "5.." matches rows where the index is >= 5.
 /// 4. Upper bounded: "..96" matches rows where the index is < 96.
-fn index_rules(input: &str) -> IResult<&str, Vec<IndexRule>> {
+fn index_rules(input: &str) -> IResult<&str, Vec<IndexFilter>> {
     delimited(
         space0,
         many0(alt((
@@ -153,19 +153,20 @@ fn index_rules(input: &str) -> IResult<&str, Vec<IndexRule>> {
     )(input)
 }
 
-fn parse_index_rules(string_representation: &str) -> Result<Vec<IndexRule>, InvalidIndexRulesError> {
+fn parse_index_rules(
+    string_representation: &str,
+) -> Result<Vec<IndexFilter>, InvalidIndexRulesError> {
     match index_rules(string_representation).finish() {
         Err(error) => Err(InvalidIndexRulesError(error.input.to_owned())),
-        Ok((unconsumed_input, rules)) if rules.is_empty() && !unconsumed_input.is_empty() => Err(
-            InvalidIndexRulesError(unconsumed_input.to_owned()),
-        ),
+        Ok((unconsumed_input, rules)) if rules.is_empty() && !unconsumed_input.is_empty() => {
+            Err(InvalidIndexRulesError(unconsumed_input.to_owned()))
+        }
         Ok((_, rules)) => Ok(rules),
     }
 }
 
 fn parse_regex_rule(string_representation: &str) -> Result<Regex, InvalidRegexRuleError> {
-    Regex::new(string_representation)
-        .map_err(|error| InvalidRegexRuleError(format!("{}", error)))
+    Regex::new(string_representation).map_err(|error| InvalidRegexRuleError(format!("{}", error)))
 }
 
 #[cfg(test)]
@@ -185,8 +186,8 @@ mod test {
     #[test]
     fn parse_index_rules() {
         let expected = vec![
-            super::IndexRule::Exact(1usize),
-            super::IndexRule::LowerBounded(5usize),
+            super::IndexFilter::Exact(1usize),
+            super::IndexFilter::LowerBounded(5usize),
         ];
         match super::parse_index_rules("1, 5..") {
             Ok(actual) => assert_eq!(actual, expected),
