@@ -20,16 +20,16 @@ impl Options {
 }
 
 /// Splits string data into parts according to the given separators.
-fn split(separators: &ByteTrie, data: Vec<u8>) -> Vec<Vec<u8>> {
+fn split(separators: &ByteTrie, data: &Vec<u8>) -> Vec<Vec<u8>> {
     let mut result = vec![];
     let mut current_line = vec![];
     let mut current_separator = vec![];
 
     for byte in data {
-        current_separator.push(byte);
+        current_separator.push(*byte);
         match separators.membership(current_separator.as_slice()) {
             Membership::NotIncluded => {
-                current_line.push(byte);
+                current_line.push(*byte);
                 if !current_separator.is_empty() {
                     current_separator = vec![];
                 }
@@ -76,23 +76,23 @@ fn keep_index_matches(rules: &Vec<IndexFilter>, data: Vec<Vec<u8>>) -> Vec<Vec<u
 
 fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     data.into_iter()
-        .filter(|&field| regex.is_match(field.as_slice()))
+        .filter(|field| regex.is_match(field.as_slice()))
         .map(|field| field.clone())
         .collect()
 }
 
-fn transform_1d(options: &Options, data: Vec<u8>) -> Vec<Vec<u8>> {
+fn transform_1d(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
     let mut result = match options.separators {
-        None => vec![data],
-        Some(separators) => split(&separators, data),
+        None => vec![data.clone()],
+        Some(ref separators) => split(separators, data),
     };
 
-    if let Some(index_filters) = options.index_filters {
-        result = keep_index_matches(&index_filters, result);
+    if let Some(ref index_filters) = options.index_filters {
+        result = keep_index_matches(index_filters, result);
     }
 
-    if let Some(regex_filter) = options.regex_filter {
-        result = keep_regex_matches(&regex_filter, result);
+    if let Some(ref regex_filter) = options.regex_filter {
+        result = keep_regex_matches(regex_filter, result);
     }
 
     result
@@ -101,10 +101,10 @@ fn transform_1d(options: &Options, data: Vec<u8>) -> Vec<Vec<u8>> {
 pub fn transform_2d(
     line_options: &Options,
     row_options: &Options,
-    data: Vec<u8>,
+    data: &Vec<u8>,
 ) -> Vec<Vec<Vec<u8>>> {
     transform_1d(line_options, data)
-        .into_iter()
+        .iter()
         .map(|line| transform_1d(row_options, line))
         .collect()
 }
@@ -132,7 +132,7 @@ mod test {
         let expected: Vec<Vec<u8>> = bytes_vec(vec!["hi\tthere\tthis", "could\tbe\tcsv"]);
         let actual = super::split(
             &separators,
-            "hi\tthere\tthis\ncould\tbe\tcsv".bytes().collect(),
+            &"hi\tthere\tthis\ncould\tbe\tcsv".bytes().collect(),
         );
         assert_eq!(actual, expected);
     }

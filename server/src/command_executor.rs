@@ -56,7 +56,7 @@ impl Stream for ClientConnection {
 
     fn poll_next(
         self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         todo!()
     }
@@ -139,10 +139,10 @@ impl CommandExecutor {
                     command: _,
                     status: _,
                     stderr: _,
-                    stdout,
+                    ref stdout,
                 } = state.status
                 {
-                    let processed =
+                    let _processed =
                         transformers::transform_2d(&state.line_options, &state.row_options, stdout);
                     // TODO: Break up into fixed size chunks and send back to the client connection.
                 }
@@ -152,7 +152,7 @@ impl CommandExecutor {
     }
 
     async fn wait_for_output(&mut self) {
-        for (client_id, connection) in self.clients.iter_mut() {
+        for connection in self.clients.values_mut() {
             match connection.status {
                 CommandStatus::Canceling {
                     ref mut child,
@@ -242,7 +242,7 @@ impl CommandExecutor {
         ClientConnection::new(client_id, receiver)
     }
 
-    fn run(&self, client_id: &Ulid, command: String) -> Result<(), UnconnectedError> {
+    fn run(&mut self, client_id: &Ulid, command: String) -> Result<(), UnconnectedError> {
         match self.clients.get_mut(client_id) {
             None => Err(UnconnectedError {}),
             Some(connection) => {
@@ -276,7 +276,7 @@ impl CommandExecutor {
                         }
                         _ => {
                             connection.status = CommandStatus::Canceling {
-                                child: *child,
+                                child: child,
                                 command: command.clone(),
                             };
                         }
@@ -459,7 +459,6 @@ impl Handler<Cancel> for CommandExecutor {
 
 // Setters for settings
 
-#[derive(Deserialize, Serialize)]
 pub struct SetLineIndexFilters {
     client_id: Ulid,
     filters: Option<Vec<IndexFilter>>,
@@ -485,7 +484,6 @@ impl Handler<SetLineIndexFilters> for CommandExecutor {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct SetLineRegexFilter {
     client_id: Ulid,
     filter: Option<Regex>,
@@ -511,7 +509,6 @@ impl Handler<SetLineRegexFilter> for CommandExecutor {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct SetLineSeparators {
     client_id: Ulid,
     separators: Option<ByteTrie>,
@@ -537,7 +534,6 @@ impl Handler<SetLineSeparators> for CommandExecutor {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct SetRowIndexFilters {
     client_id: Ulid,
     filters: Option<Vec<IndexFilter>>,
@@ -563,7 +559,6 @@ impl Handler<SetRowIndexFilters> for CommandExecutor {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct SetRowRegexFilter {
     client_id: Ulid,
     filter: Option<Regex>,
@@ -589,7 +584,6 @@ impl Handler<SetRowRegexFilter> for CommandExecutor {
     }
 }
 
-#[derive(Deserialize, Serialize)]
 pub struct SetRowSeparators {
     client_id: Ulid,
     separators: Option<ByteTrie>,

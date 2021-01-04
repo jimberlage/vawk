@@ -40,7 +40,7 @@ impl ByteTrie {
         let head = path.first().unwrap();
         match self.children.get(head) {
             Some(child) if path.len() == 1 && child.is_empty() => Membership::IncludedAndTerminal,
-            Some(child) if path.len() == 1 => Membership::Included,
+            Some(_) if path.len() == 1 => Membership::Included,
             Some(child) => child.membership(&path[1..]),
             None => Membership::NotIncluded,
         }
@@ -50,14 +50,14 @@ impl ByteTrie {
         self.children.is_empty()
     }
 
-    pub fn merge(&mut self, other: &ByteTrie) {
+    pub fn merge(&mut self, other: ByteTrie) {
         if other.is_empty() {
             return;
         }
 
-        for (byte, other_child) in other.children {
+        for (byte, other_child) in other.children.into_iter() {
             match self.children.get_mut(&byte) {
-                Some(child) => child.merge(&other_child),
+                Some(child) => child.merge(other_child),
                 None => {
                     self.children.insert(byte, other_child);
                 }
