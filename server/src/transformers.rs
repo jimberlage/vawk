@@ -109,12 +109,6 @@ pub fn transform_2d(
         .collect()
 }
 
-pub fn encode_2d(data: Vec<Vec<Vec<u8>>>) -> Vec<Vec<String>> {
-    data.into_iter()
-        .map(|line| line.into_iter().map(|row| base64::encode(row)).collect())
-        .collect()
-}
-
 #[cfg(test)]
 mod test {
     use crate::byte_trie::ByteTrie;
