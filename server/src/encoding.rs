@@ -1,7 +1,7 @@
 use base64;
 use serde_json;
 
-const CHUNK_SIZE: usize = 8 * 1_048_576;
+const MAX_CHUNK_SIZE: usize = 8 * 1_048_576;
 const MAX_OUTPUT_SIZE: usize = 256 * 1_048_576;
 
 pub enum EncodingError {
@@ -45,14 +45,32 @@ pub fn encode_stdout(stdout: &Vec<Vec<Vec<u8>>>) -> Result<String, EncodingError
     Ok(serde_json::to_string(&base64_encoded)?)
 }
 
-pub struct ChildOutputIterator {
-    output: dyn Iterator<Item = u8>
+pub struct ChildOutputIterator<I> where I: Iterator<Item = char> + Copy {
+    output: I,
 }
 
-impl Iterator for ChildOutputIterator {
+impl <I> Iterator for ChildOutputIterator<I> where I: Iterator<Item = char> + Copy {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let mut chunk_size = 0usize;
+        let mut chunk = vec![];
+
+        // With base64 encoding & JSON, each char is one byte.
+        // Each character is guaranteed to be ASCII.
+        for c in self.output {
+            chunk_size += 1;
+            chunk.push(c);
+
+            if chunk_size == MAX_CHUNK_SIZE {
+                break;
+            }
+        }
+
+        if chunk.is_empty() {
+            None
+        } else {
+            Some(chunk.into_iter().collect())
+        }
     }
 }
