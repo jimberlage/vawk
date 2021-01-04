@@ -49,21 +49,6 @@ impl ByteTrie {
     pub fn is_empty(&self) -> bool {
         self.children.is_empty()
     }
-
-    pub fn merge(&mut self, other: ByteTrie) {
-        if other.is_empty() {
-            return;
-        }
-
-        for (byte, other_child) in other.children.into_iter() {
-            match self.children.get_mut(&byte) {
-                Some(child) => child.merge(other_child),
-                None => {
-                    self.children.insert(byte, other_child);
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]

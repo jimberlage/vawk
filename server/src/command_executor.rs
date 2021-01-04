@@ -68,14 +68,14 @@ enum CommandStatus {
         command: String,
     },
     Canceling {
-        child: Box<Child>,
+        child: Child,
         command: String,
     },
     CancellationFailed {
         error: io::Error,
     },
     Running {
-        child: Box<Child>,
+        child: Child,
         command: String,
     },
     Failed {
@@ -255,7 +255,7 @@ impl CommandExecutor {
                     Ok(child) => {
                         connection.status = CommandStatus::Running {
                             command,
-                            child: Box::new(child),
+                            child,
                         };
                     }
                 };
@@ -265,23 +265,24 @@ impl CommandExecutor {
     }
 
     fn cancel(&mut self, client_id: &Ulid) -> Result<(), UnconnectedError> {
-        match self.clients.get_mut(client_id) {
+        match self.clients.remove(client_id) {
             None => Err(UnconnectedError {}),
-            Some(connection) => {
+            Some(mut connection) => {
                 connection.last_active = Instant::now();
-                if let CommandStatus::Running { child, command } = &mut connection.status {
+                if let CommandStatus::Running { mut child, command } = connection.status {
                     match child.start_kill() {
                         Err(error) if error.kind() != io::ErrorKind::InvalidInput => {
                             connection.status = CommandStatus::CancellationFailed { error };
                         }
                         _ => {
                             connection.status = CommandStatus::Canceling {
-                                child: child,
+                                child,
                                 command: command.clone(),
                             };
                         }
                     }
                 }
+                self.clients.insert(*client_id, connection);
                 Ok(())
             }
         }
@@ -460,8 +461,8 @@ impl Handler<Cancel> for CommandExecutor {
 // Setters for settings
 
 pub struct SetLineIndexFilters {
-    client_id: Ulid,
-    filters: Option<Vec<IndexFilter>>,
+    pub client_id: Ulid,
+    pub filters: Option<Vec<IndexFilter>>,
 }
 
 impl Message for SetLineIndexFilters {
@@ -485,8 +486,8 @@ impl Handler<SetLineIndexFilters> for CommandExecutor {
 }
 
 pub struct SetLineRegexFilter {
-    client_id: Ulid,
-    filter: Option<Regex>,
+    pub client_id: Ulid,
+    pub filter: Option<Regex>,
 }
 
 impl Message for SetLineRegexFilter {
@@ -510,8 +511,8 @@ impl Handler<SetLineRegexFilter> for CommandExecutor {
 }
 
 pub struct SetLineSeparators {
-    client_id: Ulid,
-    separators: Option<ByteTrie>,
+    pub client_id: Ulid,
+    pub separators: Option<ByteTrie>,
 }
 
 impl Message for SetLineSeparators {
@@ -535,8 +536,8 @@ impl Handler<SetLineSeparators> for CommandExecutor {
 }
 
 pub struct SetRowIndexFilters {
-    client_id: Ulid,
-    filters: Option<Vec<IndexFilter>>,
+    pub client_id: Ulid,
+    pub filters: Option<Vec<IndexFilter>>,
 }
 
 impl Message for SetRowIndexFilters {
@@ -560,8 +561,8 @@ impl Handler<SetRowIndexFilters> for CommandExecutor {
 }
 
 pub struct SetRowRegexFilter {
-    client_id: Ulid,
-    filter: Option<Regex>,
+    pub client_id: Ulid,
+    pub filter: Option<Regex>,
 }
 
 impl Message for SetRowRegexFilter {
@@ -585,8 +586,8 @@ impl Handler<SetRowRegexFilter> for CommandExecutor {
 }
 
 pub struct SetRowSeparators {
-    client_id: Ulid,
-    separators: Option<ByteTrie>,
+    pub client_id: Ulid,
+    pub separators: Option<ByteTrie>,
 }
 
 impl Message for SetRowSeparators {
