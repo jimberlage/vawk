@@ -1,3 +1,4 @@
+use actix_web::web;
 use base64;
 use serde_json;
 
@@ -15,7 +16,7 @@ impl From<serde_json::Error> for EncodingError {
     }
 }
 
-pub fn encode_stderr(stderr: &Vec<u8>) -> Result<String, EncodingError> {
+fn encode_stderr(stderr: &Vec<u8>) -> Result<String, EncodingError> {
     if stderr.len() > MAX_OUTPUT_SIZE {
         return Err(EncodingError::TooLarge);
     }
@@ -23,7 +24,7 @@ pub fn encode_stderr(stderr: &Vec<u8>) -> Result<String, EncodingError> {
     Ok(base64::encode(stderr))
 }
 
-pub fn encode_stdout(stdout: &Vec<Vec<Vec<u8>>>) -> Result<String, EncodingError> {
+fn encode_stdout(stdout: &Vec<Vec<Vec<u8>>>) -> Result<String, EncodingError> {
     let mut output_size = 0usize;
     let mut base64_encoded = vec![];
 
@@ -45,32 +46,48 @@ pub fn encode_stdout(stdout: &Vec<Vec<Vec<u8>>>) -> Result<String, EncodingError
     Ok(serde_json::to_string(&base64_encoded)?)
 }
 
-pub struct ChildOutputIterator<I> where I: Iterator<Item = char> + Copy {
-    output: I,
-}
+fn chunked(encoded: &str, event_type: &str) -> Vec<web::Bytes> {
+    let mut chunk_size = 0usize;
+    let mut chunks = vec![];
+    let mut index = 0;
+    let mut total = encoded.len() / MAX_CHUNK_SIZE;
+    if encoded.len() % MAX_CHUNK_SIZE > 0 {
+        total += 1;
+    }
+    let mut chunk: Vec<char> = format!("event: {}\ndata: {{\"index\": {}, \"total\": {}}}\ndata: ", event_type, index, total).chars().collect();
 
-impl <I> Iterator for ChildOutputIterator<I> where I: Iterator<Item = char> + Copy {
-    type Item = String;
+    // With base64 encoding & JSON, each char is one byte.
+    // Each character is guaranteed to be ASCII.
+    for c in encoded.chars() {
+        chunk_size += 1;
+        chunk.push(c);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut chunk_size = 0usize;
-        let mut chunk = vec![];
-
-        // With base64 encoding & JSON, each char is one byte.
-        // Each character is guaranteed to be ASCII.
-        for c in self.output {
-            chunk_size += 1;
-            chunk.push(c);
-
-            if chunk_size == MAX_CHUNK_SIZE {
-                break;
+        if chunk_size == MAX_CHUNK_SIZE {
+            for _ in 0..2 {
+                chunk.push('\n');
             }
-        }
-
-        if chunk.is_empty() {
-            None
-        } else {
-            Some(chunk.into_iter().collect())
+            chunks.push(web::Bytes::from(chunk.iter().collect::<String>()));
+            index += 1;
+            chunk = format!("event: {}\ndata: {{\"index\": {}, \"total\": {}}}\ndata: ", event_type, index, total).chars().collect();
         }
     }
+
+    if !chunk.is_empty() {
+        for _ in 0..2 {
+            chunk.push('\n');
+        }
+        chunks.push(web::Bytes::from(chunk.iter().collect::<String>()));
+    }
+
+    chunks
+}
+
+fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>) -> Result<Vec<web::Bytes>, EncodingError> {
+    let encoded = encode_stdout(stdout)?;
+    Ok(chunked(&encoded, "stdout"))
+}
+
+fn stderr_chunks(stderr: &Vec<u8>) -> Result<Vec<web::Bytes>, EncodingError> {
+    let encoded = encode_stderr(stderr)?;
+    Ok(chunked(&encoded, "stderr"))
 }
