@@ -82,12 +82,12 @@ fn chunked(encoded: &str, event_type: &str) -> Vec<web::Bytes> {
     chunks
 }
 
-fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>) -> Result<Vec<web::Bytes>, EncodingError> {
+pub fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>) -> Result<Vec<web::Bytes>, EncodingError> {
     let encoded = encode_stdout(stdout)?;
     Ok(chunked(&encoded, "stdout"))
 }
 
-fn stderr_chunks(stderr: &Vec<u8>) -> Result<Vec<web::Bytes>, EncodingError> {
+pub fn stderr_chunks(stderr: &Vec<u8>) -> Result<Vec<web::Bytes>, EncodingError> {
     let encoded = encode_stderr(stderr)?;
     Ok(chunked(&encoded, "stderr"))
 }

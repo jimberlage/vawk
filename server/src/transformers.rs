@@ -1,6 +1,5 @@
 use crate::byte_trie::{ByteTrie, Membership};
 use crate::parsers::IndexFilter;
-use base64;
 use regex::bytes::Regex;
 
 pub struct Options {

@@ -2,6 +2,7 @@
 /// Scaling to large numbers of clients is not an explicit goal of this architecture.
 /// It is intended to robustly support multiple tabs open displaying shble output for a single user.
 use crate::byte_trie::ByteTrie;
+use crate::encoding;
 use crate::parsers::IndexFilter;
 use crate::transformers;
 use actix::dev::{MessageResponse, ResponseChannel};
@@ -20,18 +21,13 @@ use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 use ulid::Ulid;
 
-enum Event {
-    StderrChunk,
-    StdoutChunk,
-}
-
 pub struct ClientConnection {
     client_id: Ulid,
-    receiver: mpsc::Receiver<Event>,
+    receiver: mpsc::Receiver<web::Bytes>,
 }
 
 impl ClientConnection {
-    fn new(client_id: Ulid, receiver: mpsc::Receiver<Event>) -> Self {
+    fn new(client_id: Ulid, receiver: mpsc::Receiver<web::Bytes>) -> Self {
         ClientConnection {
             client_id,
             receiver,
@@ -56,9 +52,9 @@ impl Stream for ClientConnection {
 
     fn poll_next(
         self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        todo!()
+        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| Ok(bytes)))
     }
 }
 
@@ -93,12 +89,12 @@ struct ServerConnection {
     last_active: Instant,
     line_options: transformers::Options,
     row_options: transformers::Options,
-    sender: mpsc::Sender<Event>,
+    sender: mpsc::Sender<web::Bytes>,
     status: CommandStatus,
 }
 
 impl ServerConnection {
-    fn new(sender: mpsc::Sender<Event>) -> Self {
+    fn new(sender: mpsc::Sender<web::Bytes>) -> Self {
         ServerConnection {
             last_active: Instant::now(),
             line_options: transformers::Options::default(),
@@ -131,24 +127,48 @@ impl CommandExecutor {
         client_id
     }
 
-    fn process_output(&self, client_id: &Ulid) -> Result<(), UnconnectedError> {
+    async fn process_output(&self, client_id: &Ulid) {
         match self.clients.get(client_id) {
-            None => Err(UnconnectedError {}),
-            Some(state) => {
+            None => {
+                log::error!("A client that no longer exists was asked for output: client_id: {}", client_id);
+            },
+            Some(connnection) => {
                 if let CommandStatus::Finished {
                     command: _,
                     status: _,
-                    stderr: _,
+                    ref stderr,
                     ref stdout,
-                } = state.status
+                } = connnection.status
                 {
-                    let _processed =
-                        transformers::transform_2d(&state.line_options, &state.row_options, stdout);
-                    // TODO: Break up into fixed size chunks and send back to the client connection.
+                    let transformed_stdout =
+                        transformers::transform_2d(&connnection.line_options, &connnection.row_options, stdout);
+                    match encoding::stdout_chunks(&transformed_stdout) {
+                        Err(error) => {
+                            log::error!();
+                        },
+                        Ok(stdout_chunks) => {
+                            match encoding::stderr_chunks(stderr) {
+                                Err(error) => {
+                                    log::error!();
+                                },
+                                Ok(stderr_chunks) => {
+                                    for chunk in stdout_chunks {
+                                        if let Err(error) = connnection.sender.send(chunk).await {
+                                            log::error!();
+                                        }
+                                    }
+                                    for chunk in stderr_chunks {
+                                        if let Err(error) = connnection.sender.send(chunk).await {
+                                            log::error!();
+                                        }
+                                    }
+                                },
+                            }
+                        },
+                    }
                 }
-                Ok(())
             }
-        }
+        };
     }
 
     async fn wait_for_output(&mut self) {
