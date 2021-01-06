@@ -19,43 +19,6 @@ use std::time::Instant;
 use tokio::sync::mpsc;
 use ulid::Ulid;
 
-pub struct ClientConnection {
-    client_id: Ulid,
-    receiver: mpsc::Receiver<web::Bytes>,
-}
-
-impl ClientConnection {
-    fn new(client_id: Ulid, receiver: mpsc::Receiver<web::Bytes>) -> Self {
-        ClientConnection {
-            client_id,
-            receiver,
-        }
-    }
-}
-
-impl<A, M> MessageResponse<A, M> for ClientConnection
-where
-    A: Actor,
-    M: Message<Result = ClientConnection>,
-{
-    fn handle<R: ResponseChannel<M>>(self, _: &mut A::Context, tx: Option<R>) {
-        if let Some(tx) = tx {
-            tx.send(self);
-        }
-    }
-}
-
-impl Stream for ClientConnection {
-    type Item = Result<web::Bytes, actix_web::Error>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| Ok(bytes)))
-    }
-}
-
 enum CommandStatus {
     Idle,
     Canceled {
@@ -86,16 +49,18 @@ enum CommandStatus {
 struct ServerConnection {
     last_active: Instant,
     line_options: transformers::Options,
+    receiver: Option<mpsc::Receiver<web::Bytes>>,
     row_options: transformers::Options,
     sender: mpsc::Sender<web::Bytes>,
     status: CommandStatus,
 }
 
 impl ServerConnection {
-    fn new(sender: mpsc::Sender<web::Bytes>) -> Self {
+    fn new(sender: mpsc::Sender<web::Bytes>, receiver: mpsc::Receiver<web::Bytes>) -> Self {
         ServerConnection {
             last_active: Instant::now(),
             line_options: transformers::Options::default(),
+            receiver: Some(receiver),
             row_options: transformers::Options::default(),
             sender,
             status: CommandStatus::Idle,
@@ -123,6 +88,22 @@ impl CommandExecutor {
             client_id = Ulid::new();
         }
         client_id
+    }
+
+    fn listen(&mut self, client_id: &Ulid) -> Result<ClientConnection, UnconnectedError> {
+        match self.clients.remove(client_id) {
+            None => Err(UnconnectedError {}),
+            Some(mut connection) => {
+                let result = match connection.receiver {
+                    // TODO: There may be something better here, but forcing the client to reconnect seems reasonable.
+                    None => Err(UnconnectedError {}),
+                    Some(receiver) => Ok(ClientConnection { receiver }),
+                };
+                connection.receiver = None;
+                self.clients.insert(*client_id, connection);
+                result
+            },
+        }
     }
 
     fn process_output(&self, client_id: &Ulid) {
@@ -249,7 +230,7 @@ impl CommandExecutor {
     }
 
     /// Set up a new connection for events related to command execution.
-    fn connect(&mut self) -> ClientConnection {
+    fn connect(&mut self) -> Ulid {
         // Connect server to client with a multi-producer, single-consumer FIFO queue.
         // Tokio's implementation of mpsc queues is used to allow it to play nicely with the runtime.
         let (sender, receiver) = mpsc::channel(100);
@@ -258,9 +239,9 @@ impl CommandExecutor {
         let client_id = self.generate_client_id();
         // Allow the executor to send messages to the client.
         self.clients
-            .insert(client_id, ServerConnection::new(sender));
+            .insert(client_id, ServerConnection::new(sender, receiver));
         // And return the connection with its end of the queue, that can be used to stream messages.
-        ClientConnection::new(client_id, receiver)
+        client_id
     }
 
     fn run(&mut self, client_id: &Ulid, command: String) -> Result<(), UnconnectedError> {
@@ -408,19 +389,88 @@ impl Actor for CommandExecutor {
     }
 }
 
+pub struct ClientConnection {
+    receiver: mpsc::Receiver<web::Bytes>,
+}
+
+impl ClientConnection {
+    fn new(client_id: Ulid, receiver: mpsc::Receiver<web::Bytes>) -> Self {
+        ClientConnection {
+            receiver,
+        }
+    }
+}
+
+impl<A, M> MessageResponse<A, M> for ClientConnection
+where
+    A: Actor,
+    M: Message<Result = ClientConnection>,
+{
+    fn handle<R: ResponseChannel<M>>(self, _: &mut A::Context, tx: Option<R>) {
+        if let Some(tx) = tx {
+            tx.send(self);
+        }
+    }
+}
+
+impl Stream for ClientConnection {
+    type Item = Result<web::Bytes, actix_web::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| Ok(bytes)))
+    }
+}
+
+#[derive(Deserialize)]
+pub struct Listen {
+    client_id: Ulid,
+}
+
+impl Message for Listen {
+    type Result = Result<ClientConnection, UnconnectedError>;
+}
+
+impl Handler<Listen> for CommandExecutor {
+    type Result = Result<ClientConnection, UnconnectedError>;
+
+    fn handle(&mut self, msg: Listen, _ctx: &mut Self::Context) -> Self::Result {
+        self.listen(&msg.client_id)
+    }
+}
+
 // Connection
 
 pub struct Connect {}
 
+#[derive(Serialize)]
+pub struct ConnectResponse {
+    client_id: Ulid,
+}
+
+impl<A, M> MessageResponse<A, M> for ConnectResponse
+where
+    A: Actor,
+    M: Message<Result = ConnectResponse>,
+{
+    fn handle<R: ResponseChannel<M>>(self, _: &mut A::Context, tx: Option<R>) {
+        if let Some(tx) = tx {
+            tx.send(self);
+        }
+    }
+}
+
 impl Message for Connect {
-    type Result = ClientConnection;
+    type Result = ConnectResponse;
 }
 
 impl Handler<Connect> for CommandExecutor {
-    type Result = ClientConnection;
+    type Result = ConnectResponse;
 
-    fn handle(&mut self, _msg: Connect, _ctx: &mut Self::Context) -> ClientConnection {
-        self.connect()
+    fn handle(&mut self, _msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
+        ConnectResponse { client_id: self.connect() }
     }
 }
 
@@ -459,7 +509,7 @@ impl Message for Run {
 impl Handler<Run> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(&mut self, msg: Run, _ctx: &mut Self::Context) -> Result<(), UnconnectedError> {
+    fn handle(&mut self, msg: Run, _ctx: &mut Self::Context) -> Self::Result {
         self.run(&msg.client_id, msg.command)
     }
 }
@@ -478,7 +528,7 @@ impl Message for Cancel {
 impl Handler<Cancel> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(&mut self, msg: Cancel, _ctx: &mut Self::Context) -> Result<(), UnconnectedError> {
+    fn handle(&mut self, msg: Cancel, _ctx: &mut Self::Context) -> Self::Result {
         self.cancel(&msg.client_id)
     }
 }
@@ -501,7 +551,7 @@ impl Handler<SetLineIndexFilters> for CommandExecutor {
         &mut self,
         msg: SetLineIndexFilters,
         ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.set_line_index_filters(&msg.client_id, msg.filters)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -526,7 +576,7 @@ impl Handler<SetLineRegexFilter> for CommandExecutor {
         &mut self,
         msg: SetLineRegexFilter,
         ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.set_line_regex_filter(&msg.client_id, msg.filter)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -551,7 +601,7 @@ impl Handler<SetLineSeparators> for CommandExecutor {
         &mut self,
         msg: SetLineSeparators,
         ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.set_line_separators(&msg.client_id, msg.separators)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -576,7 +626,7 @@ impl Handler<SetRowIndexFilters> for CommandExecutor {
         &mut self,
         msg: SetRowIndexFilters,
         ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.set_row_index_filters(&msg.client_id, msg.filters)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -601,7 +651,7 @@ impl Handler<SetRowRegexFilter> for CommandExecutor {
         &mut self,
         msg: SetRowRegexFilter,
         ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.set_row_regex_filter(&msg.client_id, msg.filter)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,

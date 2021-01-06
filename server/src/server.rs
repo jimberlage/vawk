@@ -2,23 +2,29 @@ use actix::prelude::{Actor, Addr};
 use actix_cors::Cors;
 use actix_web;
 use actix_web::web;
-use crate::command_executor::{self, Cancel, CommandExecutor, Connect, Run};
+use crate::command_executor::{self, Cancel, CommandExecutor, Connect, Listen, Run};
 use crate::parsers;
 use serde::{Deserialize, Serialize};
 use std::io;
 use ulid::Ulid;
 
-async fn connect(executor: web::Data<Addr<CommandExecutor>>) -> impl actix_web::Responder {
-    match executor.send(Connect {}).await {
-        Ok(connection) => {
+async fn listen(executor: web::Data<Addr<CommandExecutor>>, web::Query(listen_msg): web::Query<Listen>) -> impl actix_web::Responder {
+    match executor.send(listen_msg).await {
+        Ok(Ok(connection)) => {
             actix_web::HttpResponse::Ok()
                 .header("Content-Type", "text/event-stream")
                 .header("Access-Control-Allow-Origin", "http://localhost:3000")
                 .streaming(connection)
         },
-        Err(_error) => {
-            actix_web::HttpResponse::TooManyRequests().finish()
-        },
+        Ok(Err(_)) => actix_web::HttpResponse::BadRequest().finish(),
+        Err(_) => actix_web::HttpResponse::TooManyRequests().finish(),
+    }
+}
+
+async fn connect(executor: web::Data<Addr<CommandExecutor>>) -> impl actix_web::Responder {
+    match executor.send(Connect {}).await {
+        Ok(response) => actix_web::HttpResponse::Ok().json(response),
+        Err(_) => actix_web::HttpResponse::TooManyRequests().finish(),
     }
 }
 
@@ -250,12 +256,13 @@ pub async fn serve() -> io::Result<()> {
                     .max_age(3600),
             )
             .app_data(protected_executor.clone())
-            .route("/api/connect", web::get().to(connect))
-            .route("/api/command/run", web::post().to(run))
             .route("/api/command/cancel", web::post().to(cancel))
+            .route("/api/command/run", web::post().to(run))
+            .route("/api/connect", web::get().to(connect))
             .route("/api/line-index-filters", web::put().to(set_line_index_filters))
             .route("/api/line-regex-filter", web::put().to(set_line_regex_filter))
             .route("/api/line-separators", web::put().to(set_line_separators))
+            .route("/api/listen", web::get().to(listen))
             .route("/api/row-index-filters", web::put().to(set_row_index_filters))
             .route("/api/row-regex-filter", web::put().to(set_row_regex_filter))
             .route("/api/row-separators", web::put().to(set_row_separators))
