@@ -1,6 +1,7 @@
 use actix_web::web;
 use base64;
 use serde_json;
+use std::process::ExitStatus;
 
 const MAX_CHUNK_SIZE: usize = 8 * 1_048_576;
 const MAX_OUTPUT_SIZE: usize = 256 * 1_048_576;
@@ -91,4 +92,8 @@ pub fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>) -> Result<Vec<web::Bytes>, Enco
 pub fn stderr_chunks(stderr: &Vec<u8>) -> Result<Vec<web::Bytes>, EncodingError> {
     let encoded = encode_stderr(stderr)?;
     Ok(chunked(&encoded, "stderr"))
+}
+
+pub fn status_message(status: &ExitStatus) -> web::Bytes {
+    web::Bytes::from(format!("event: status\ndata: {{\"status\": {}}}\ndata: ", status))
 }

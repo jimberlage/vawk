@@ -13,11 +13,9 @@ use futures::Stream;
 use regex::bytes::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io;
-use std::process::ExitStatus;
+use std::io::{self, BufReader, Read};
+use std::process::{Child, Command, ExitStatus};
 use std::time::Instant;
-use tokio::io::{AsyncReadExt, BufReader};
-use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 use ulid::Ulid;
 
@@ -135,7 +133,7 @@ impl CommandExecutor {
             Some(connnection) => {
                 if let CommandStatus::Finished {
                     command: _,
-                    status: _,
+                    ref status,
                     ref stderr,
                     ref stdout,
                 } = connnection.status
@@ -162,6 +160,9 @@ impl CommandExecutor {
                                             log::error!("Failed to send a chunk of stderr, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                         }
                                     }
+                                    if let Err(error) = connnection.sender.try_send(encoding::status_message(status)) {
+                                        log::error!("Failed to send an exit status, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
+                                    }
                                 },
                             }
                         },
@@ -171,7 +172,7 @@ impl CommandExecutor {
         };
     }
 
-    async fn wait_for_output(&mut self) {
+    fn check_children(&mut self) {
         for connection in self.clients.values_mut() {
             match connection.status {
                 CommandStatus::Canceling {
@@ -206,7 +207,7 @@ impl CommandExecutor {
                             Some(ref mut stderr) => {
                                 let mut reader = BufReader::new(stderr);
                                 let mut bytes = vec![];
-                                if let Err(error) = reader.read_to_end(&mut bytes).await {
+                                if let Err(error) = reader.read_to_end(&mut bytes) {
                                     connection.status = CommandStatus::Failed { error };
                                     continue;
                                 };
@@ -225,7 +226,7 @@ impl CommandExecutor {
                             Some(ref mut stdout) => {
                                 let mut reader = BufReader::new(stdout);
                                 let mut bytes = vec![];
-                                match reader.read_to_end(&mut bytes).await {
+                                match reader.read_to_end(&mut bytes) {
                                     Err(error) => {
                                         connection.status = CommandStatus::Failed { error };
                                     }
@@ -290,7 +291,7 @@ impl CommandExecutor {
             Some(mut connection) => {
                 connection.last_active = Instant::now();
                 if let CommandStatus::Running { mut child, command } = connection.status {
-                    match child.start_kill() {
+                    match child.kill() {
                         Err(error) if error.kind() != io::ErrorKind::InvalidInput => {
                             connection.status = CommandStatus::CancellationFailed { error };
                         }
@@ -401,6 +402,10 @@ impl CommandExecutor {
 
 impl Actor for CommandExecutor {
     type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        ctx.address().do_send(CheckChildren {});
+    }
 }
 
 // Connection
@@ -621,11 +626,26 @@ impl Handler<SetRowSeparators> for CommandExecutor {
         &mut self,
         msg: SetRowSeparators,
         ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.set_row_separators(&msg.client_id, msg.separators)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
         });
         Ok(())
+    }
+}
+
+pub struct CheckChildren {}
+
+impl Message for CheckChildren {
+    type Result = ();
+}
+
+impl Handler<CheckChildren> for CommandExecutor {
+    type Result = ();
+
+    fn handle(&mut self, _: CheckChildren, ctx: &mut Self::Context) -> Self::Result {
+        self.check_children();
+        ctx.address().do_send(CheckChildren {});
     }
 }
