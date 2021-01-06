@@ -5,6 +5,7 @@ use serde_json;
 const MAX_CHUNK_SIZE: usize = 8 * 1_048_576;
 const MAX_OUTPUT_SIZE: usize = 256 * 1_048_576;
 
+#[derive(Debug)]
 pub enum EncodingError {
     JSON(serde_json::Error),
     TooLarge,

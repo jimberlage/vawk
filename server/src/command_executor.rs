@@ -51,7 +51,7 @@ impl Stream for ClientConnection {
     type Item = Result<web::Bytes, actix_web::Error>;
 
     fn poll_next(
-        self: std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| Ok(bytes)))
@@ -127,7 +127,7 @@ impl CommandExecutor {
         client_id
     }
 
-    async fn process_output(&self, client_id: &Ulid) {
+    fn process_output(&self, client_id: &Ulid) {
         match self.clients.get(client_id) {
             None => {
                 log::error!("A client that no longer exists was asked for output: client_id: {}", client_id);
@@ -144,22 +144,22 @@ impl CommandExecutor {
                         transformers::transform_2d(&connnection.line_options, &connnection.row_options, stdout);
                     match encoding::stdout_chunks(&transformed_stdout) {
                         Err(error) => {
-                            log::error!();
+                            log::error!("Failed to encode stdout: client_id: {}, error: {:#?}", client_id, error);
                         },
                         Ok(stdout_chunks) => {
                             match encoding::stderr_chunks(stderr) {
                                 Err(error) => {
-                                    log::error!();
+                                    log::error!("Failed to encode stderr: client_id: {}, error: {:#?}", client_id, error);
                                 },
                                 Ok(stderr_chunks) => {
                                     for chunk in stdout_chunks {
-                                        if let Err(error) = connnection.sender.send(chunk).await {
-                                            log::error!();
+                                        if let Err(error) = connnection.sender.try_send(chunk) {
+                                            log::error!("Failed to send a chunk of stdout, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                         }
                                     }
                                     for chunk in stderr_chunks {
-                                        if let Err(error) = connnection.sender.send(chunk).await {
-                                            log::error!();
+                                        if let Err(error) = connnection.sender.try_send(chunk) {
+                                            log::error!("Failed to send a chunk of stderr, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                         }
                                     }
                                 },
@@ -424,17 +424,17 @@ struct ProcessOutput {
 }
 
 impl Message for ProcessOutput {
-    type Result = Result<(), UnconnectedError>;
+    type Result = ();
 }
 
 impl Handler<ProcessOutput> for CommandExecutor {
-    type Result = Result<(), UnconnectedError>;
+    type Result = ();
 
     fn handle(
         &mut self,
         msg: ProcessOutput,
         _ctx: &mut Self::Context,
-    ) -> Result<(), UnconnectedError> {
+    ) -> Self::Result {
         self.process_output(&msg.client_id)
     }
 }
