@@ -19,6 +19,7 @@ use std::time::Instant;
 use tokio::sync::mpsc;
 use ulid::Ulid;
 
+#[derive(Debug)]
 enum CommandStatus {
     Idle,
     Canceled {
@@ -94,19 +95,20 @@ impl CommandExecutor {
         match self.clients.remove(client_id) {
             None => Err(UnconnectedError {}),
             Some(mut connection) => {
-                let result = match connection.receiver {
+                match connection.receiver {
                     // TODO: There may be something better here, but forcing the client to reconnect seems reasonable.
                     None => Err(UnconnectedError {}),
-                    Some(receiver) => Ok(ClientConnection { receiver }),
-                };
-                connection.receiver = None;
-                self.clients.insert(*client_id, connection);
-                result
+                    Some(receiver) => {
+                        connection.receiver = None;
+                        self.clients.insert(*client_id, connection);
+                        Ok(ClientConnection { receiver })
+                    },
+                }
             },
         }
     }
 
-    fn process_output(&self, client_id: &Ulid) {
+    fn process_output(&mut self, client_id: &Ulid) {
         match self.clients.get(client_id) {
             None => {
                 log::error!("A client that no longer exists was asked for output: client_id: {}", client_id);
@@ -153,8 +155,9 @@ impl CommandExecutor {
         };
     }
 
-    fn check_children(&mut self) {
-        for connection in self.clients.values_mut() {
+    fn check_children(&mut self) -> Vec<Ulid> {
+        let mut finished_children = vec![];
+        for (client_id, connection) in self.clients.iter_mut() {
             match connection.status {
                 CommandStatus::Canceling {
                     ref mut child,
@@ -222,11 +225,13 @@ impl CommandExecutor {
                                 };
                             }
                         };
+                        finished_children.push(client_id.clone());
                     }
                 },
                 _ => (),
             };
         }
+        finished_children
     }
 
     /// Set up a new connection for events related to command execution.
@@ -389,6 +394,7 @@ impl Actor for CommandExecutor {
     }
 }
 
+#[derive(Debug)]
 pub struct ClientConnection {
     receiver: mpsc::Receiver<web::Bytes>,
 }
@@ -420,7 +426,7 @@ impl Stream for ClientConnection {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| Ok(bytes)))
+        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| { dbg!(bytes.clone()); Ok(bytes) }))
     }
 }
 
@@ -695,7 +701,10 @@ impl Handler<CheckChildren> for CommandExecutor {
     type Result = ();
 
     fn handle(&mut self, _: CheckChildren, ctx: &mut Self::Context) -> Self::Result {
-        self.check_children();
+        let finished = self.check_children();
+        for client_id in finished {
+            ctx.address().do_send(ProcessOutput { client_id });
+        }
         ctx.address().do_send(CheckChildren {});
     }
 }
