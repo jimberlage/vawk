@@ -1,14 +1,13 @@
-use actix::prelude::{Actor, Addr};
-use actix_cors::Cors;
+use actix::prelude::Addr;
 use actix_web;
+use actix_web::HttpResponse;
 use actix_web::web;
 use crate::command_executor::{self, Cancel, CommandExecutor, Connect, Listen, Run};
 use crate::parsers;
 use serde::{Deserialize, Serialize};
-use std::io;
 use ulid::Ulid;
 
-async fn listen(executor: web::Data<Addr<CommandExecutor>>, web::Query(listen_msg): web::Query<Listen>) -> impl actix_web::Responder {
+pub async fn listen(executor: web::Data<Addr<CommandExecutor>>, web::Query(listen_msg): web::Query<Listen>) -> HttpResponse {
     match executor.send(listen_msg).await {
         Ok(Ok(connection)) => {
             actix_web::HttpResponse::Ok()
@@ -21,14 +20,14 @@ async fn listen(executor: web::Data<Addr<CommandExecutor>>, web::Query(listen_ms
     }
 }
 
-async fn connect(executor: web::Data<Addr<CommandExecutor>>) -> impl actix_web::Responder {
+pub async fn connect(executor: web::Data<Addr<CommandExecutor>>) -> HttpResponse {
     match executor.send(Connect {}).await {
         Ok(response) => actix_web::HttpResponse::Ok().json(response),
         Err(_) => actix_web::HttpResponse::TooManyRequests().finish(),
     }
 }
 
-async fn run(executor: web::Data<Addr<CommandExecutor>>, web::Json(run): web::Json<Run>) -> impl actix_web::Responder {
+pub async fn run(executor: web::Data<Addr<CommandExecutor>>, web::Json(run): web::Json<Run>) -> HttpResponse {
     match executor.send(run).await {
         Ok(Ok(())) => actix_web::HttpResponse::Ok().finish(),
         Ok(Err(_)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -36,7 +35,7 @@ async fn run(executor: web::Data<Addr<CommandExecutor>>, web::Json(run): web::Js
     }
 }
 
-async fn cancel(executor: web::Data<Addr<CommandExecutor>>, web::Json(cancel): web::Json<Cancel>) -> impl actix_web::Responder {
+pub async fn cancel(executor: web::Data<Addr<CommandExecutor>>, web::Json(cancel): web::Json<Cancel>) -> HttpResponse {
     match executor.send(cancel).await {
         Ok(Ok(())) => actix_web::HttpResponse::Ok().finish(),
         Ok(Err(_)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -45,12 +44,12 @@ async fn cancel(executor: web::Data<Addr<CommandExecutor>>, web::Json(cancel): w
 }
 
 #[derive(Deserialize, Serialize)]
-struct SetLineIndexFilters {
-    client_id: Ulid,
-    filters: Option<String>,
+pub struct SetLineIndexFilters {
+    pub client_id: Ulid,
+    pub filters: Option<String>,
 }
 
-async fn set_line_index_filters(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_line_index_filters): web::Json<SetLineIndexFilters>) -> impl actix_web::Responder {
+pub async fn set_line_index_filters(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_line_index_filters): web::Json<SetLineIndexFilters>) -> HttpResponse {
     match set_line_index_filters.filters.map(|filters| parsers::parse_index_filters(&filters)) {
         // TODO: Give more of an update to the user here about what went wrong.
         Some(Err(_error)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -78,12 +77,12 @@ async fn set_line_index_filters(executor: web::Data<Addr<CommandExecutor>>, web:
 }
 
 #[derive(Deserialize, Serialize)]
-struct SetLineRegexFilter {
-    client_id: Ulid,
-    filter: Option<String>,
+pub struct SetLineRegexFilter {
+    pub client_id: Ulid,
+    pub filter: Option<String>,
 }
 
-async fn set_line_regex_filter(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_line_regex_filter): web::Json<SetLineRegexFilter>) -> impl actix_web::Responder {
+pub async fn set_line_regex_filter(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_line_regex_filter): web::Json<SetLineRegexFilter>) -> HttpResponse {
     match set_line_regex_filter.filter.map(|filter| parsers::parse_regex_filter(&filter)) {
         // TODO: Give more of an update to the user here about what went wrong.
         Some(Err(_error)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -111,12 +110,12 @@ async fn set_line_regex_filter(executor: web::Data<Addr<CommandExecutor>>, web::
 }
 
 #[derive(Deserialize, Serialize)]
-struct SetLineSeparators {
-    client_id: Ulid,
-    separators: Option<Vec<String>>,
+pub struct SetLineSeparators {
+    pub client_id: Ulid,
+    pub separators: Option<Vec<String>>,
 }
 
-async fn set_line_separators(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_line_separators): web::Json<SetLineSeparators>) -> impl actix_web::Responder {
+pub async fn set_line_separators(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_line_separators): web::Json<SetLineSeparators>) -> HttpResponse {
     match set_line_separators.separators.map(|separators| parsers::parse_field_separators(&separators)) {
         // TODO: Give more of an update to the user here about what went wrong.
         Some(Err(_error)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -144,12 +143,12 @@ async fn set_line_separators(executor: web::Data<Addr<CommandExecutor>>, web::Js
 }
 
 #[derive(Deserialize, Serialize)]
-struct SetRowIndexFilters {
-    client_id: Ulid,
-    filters: Option<String>,
+pub struct SetRowIndexFilters {
+    pub client_id: Ulid,
+    pub filters: Option<String>,
 }
 
-async fn set_row_index_filters(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_row_index_filters): web::Json<SetRowIndexFilters>) -> impl actix_web::Responder {
+pub async fn set_row_index_filters(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_row_index_filters): web::Json<SetRowIndexFilters>) -> HttpResponse {
     match set_row_index_filters.filters.map(|filters| parsers::parse_index_filters(&filters)) {
         // TODO: Give more of an update to the user here about what went wrong.
         Some(Err(_error)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -177,12 +176,12 @@ async fn set_row_index_filters(executor: web::Data<Addr<CommandExecutor>>, web::
 }
 
 #[derive(Deserialize, Serialize)]
-struct SetRowRegexFilter {
-    client_id: Ulid,
-    filter: Option<String>,
+pub struct SetRowRegexFilter {
+    pub client_id: Ulid,
+    pub filter: Option<String>,
 }
 
-async fn set_row_regex_filter(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_row_regex_filter): web::Json<SetRowRegexFilter>) -> impl actix_web::Responder {
+pub async fn set_row_regex_filter(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_row_regex_filter): web::Json<SetRowRegexFilter>) -> HttpResponse {
     match set_row_regex_filter.filter.map(|filter| parsers::parse_regex_filter(&filter)) {
         // TODO: Give more of an update to the user here about what went wrong.
         Some(Err(_error)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -210,12 +209,12 @@ async fn set_row_regex_filter(executor: web::Data<Addr<CommandExecutor>>, web::J
 }
 
 #[derive(Deserialize, Serialize)]
-struct SetRowSeparators {
-    client_id: Ulid,
-    separators: Option<Vec<String>>,
+pub struct SetRowSeparators {
+    pub client_id: Ulid,
+    pub separators: Option<Vec<String>>,
 }
 
-async fn set_row_separators(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_row_separators): web::Json<SetRowSeparators>) -> impl actix_web::Responder {
+pub async fn set_row_separators(executor: web::Data<Addr<CommandExecutor>>, web::Json(set_row_separators): web::Json<SetRowSeparators>) -> HttpResponse {
     match set_row_separators.separators.map(|separators| parsers::parse_field_separators(&separators)) {
         // TODO: Give more of an update to the user here about what went wrong.
         Some(Err(_error)) => actix_web::HttpResponse::BadRequest().finish(),
@@ -240,34 +239,4 @@ async fn set_row_separators(executor: web::Data<Addr<CommandExecutor>>, web::Jso
             }
         }
     }
-}
-
-pub async fn serve() -> io::Result<()> {
-    let executor = CommandExecutor::new().start();
-    let protected_executor = web::Data::new(executor);
-
-    actix_web::HttpServer::new(move || {
-        actix_web::App::new()
-            .wrap(
-                // TODO: Restrict this to dev mode.
-                Cors::default()
-                    .allowed_origin("http://localhost:3000")
-                    .allowed_methods(vec!["GET", "POST", "PUT"])
-                    .max_age(3600),
-            )
-            .app_data(protected_executor.clone())
-            .route("/api/command/cancel", web::post().to(cancel))
-            .route("/api/command/run", web::post().to(run))
-            .route("/api/connect", web::get().to(connect))
-            .route("/api/line-index-filters", web::put().to(set_line_index_filters))
-            .route("/api/line-regex-filter", web::put().to(set_line_regex_filter))
-            .route("/api/line-separators", web::put().to(set_line_separators))
-            .route("/api/listen", web::get().to(listen))
-            .route("/api/row-index-filters", web::put().to(set_row_index_filters))
-            .route("/api/row-regex-filter", web::put().to(set_row_regex_filter))
-            .route("/api/row-separators", web::put().to(set_row_separators))
-    })
-    .bind("127.0.0.1:6846")?
-    .run()
-    .await
 }

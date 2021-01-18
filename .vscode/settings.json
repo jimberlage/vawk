@@ -1,4 +1,4 @@
 {
-    "rust-analyzer.updates.channel": "nightly",
+    "rust-analyzer.updates.channel": "stable",
     "typescript.tsdk": "/usr/local/lib/node_modules/typescript/lib"
 }

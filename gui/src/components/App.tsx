@@ -63,11 +63,13 @@ let App = () => {
 
     setInitStatus('pending');
 
-    fetch('http://localhost:6846/api/join', {
-      method: 'post',
+    fetch('http://localhost:6846/api/connect', {
+      method: 'get',
       headers: {
         'Content-Type': 'application/json'
       }
+    }).then(response => {
+      console.log(response);
     }).finally(() => setInitStatus('initialized'));
   }, [initStatus, setInitStatus]);
 

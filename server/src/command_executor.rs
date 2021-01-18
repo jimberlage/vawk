@@ -445,7 +445,7 @@ impl Handler<Listen> for CommandExecutor {
 
 pub struct Connect {}
 
-#[derive(Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct ConnectResponse {
     client_id: Ulid,
 }
