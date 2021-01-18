@@ -12,7 +12,6 @@ pub async fn listen(executor: web::Data<Addr<CommandExecutor>>, web::Query(liste
         Ok(Ok(connection)) => {
             actix_web::HttpResponse::Ok()
                 .header("Content-Type", "text/event-stream")
-                .header("Access-Control-Allow-Origin", "http://localhost:3000")
                 .streaming(connection)
         },
         Ok(Err(_)) => actix_web::HttpResponse::BadRequest().finish(),

@@ -25,12 +25,15 @@ let Row = (props: RowProps) => {
 };
 
 type changeCommandFormValues = {
+  'client_id': String | undefined;
   command: String;
 }
 
-let changeCommand = (values: changeCommandFormValues) => {
-  fetch('http://localhost:6846/api/command', {
-    method: 'put',
+let changeCommand = (clientId: String, values: changeCommandFormValues) => {
+  values['client_id'] = clientId;
+  // TODO: Error handling
+  fetch('http://localhost:6846/api/command/run', {
+    method: 'post',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -38,10 +41,14 @@ let changeCommand = (values: changeCommandFormValues) => {
   })
 };
 
-let ChangeCommandForm = () => {
+type ChangeCommandFormProps = {
+  clientId: String;
+}
+
+let ChangeCommandForm = ({ clientId }: ChangeCommandFormProps) => {
   return (
     <>
-      <Form layout="inline" onFinish={changeCommand}>
+      <Form layout="inline" onFinish={(values) => changeCommand(clientId, values)}>
         <Form.Item label="Command" name="command">
           <Input />
         </Form.Item>
@@ -55,23 +62,38 @@ let ChangeCommandForm = () => {
 
 let App = () => {
   // Initialize the app, resetting the time the server has last checked to ensure that it submits an update.
+  const [clientId, setClientId] = useState<String | undefined>();
   const [initStatus, setInitStatus] = useState<'uninitialized' | 'pending' | 'initialized'>('uninitialized');
 
   useEffect(() => {
-    if (initStatus !== 'uninitialized')
-      return;
+    (async () => {
+      if (initStatus !== 'uninitialized')
+        return;
+  
+      setInitStatus('pending');
+  
+      try {
+        let response = await fetch('http://localhost:6846/api/connect', {
+          method: 'get',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.status !== 200) {
+          // TODO: Set error
+          return;
+        }
 
-    setInitStatus('pending');
-
-    fetch('http://localhost:6846/api/connect', {
-      method: 'get',
-      headers: {
-        'Content-Type': 'application/json'
+        let body = await response.json();
+        let clientId = body['client_id'] as string;
+        if (clientId) {
+          setClientId(clientId);
+        }
+      } finally {
+        setInitStatus('initialized');
       }
-    }).then(response => {
-      console.log(response);
-    }).finally(() => setInitStatus('initialized'));
-  }, [initStatus, setInitStatus]);
+    })()
+  }, [initStatus, setInitStatus, setClientId]);
 
   // Our default IFS is a newline character, but that can be changed at the user level.
   const [lineSeparators, setLineSeparators] = useState<string>('\\n');
@@ -85,24 +107,26 @@ let App = () => {
 
   // Listen for updates when the app is loaded (and cleanup after ourselves).
   useEffect(() => {
-    const updateStream = new EventSource('http://localhost:6846/api/command/output');
-    updateStream.onmessage = (event) => {
-      if (!event?.data) {
-        setError(new InvalidServerEventError());
-        return
-      }
-
-      let data = JSON.parse(event.data);
-
-      if (!data?.stdout) {
-        setError(new InvalidServerEventError());
-        return
-      }
-
-      setStdout(atob(data.stdout as string));
-    };
-    return () => updateStream.close();
-  }, [setStdout]);
+    if (clientId) {
+      const updateStream = new EventSource(`http://localhost:6846/api/listen?client_id=${clientId}`);
+      updateStream.onmessage = (event) => {
+        if (!event?.data) {
+          setError(new InvalidServerEventError());
+          return
+        }
+  
+        let data = JSON.parse(event.data);
+  
+        if (!data?.stdout) {
+          setError(new InvalidServerEventError());
+          return
+        }
+  
+        setStdout(atob(data.stdout as string));
+      };
+      return () => updateStream.close();
+    }
+  }, [clientId, setStdout]);
 
   return (
     <>
@@ -132,7 +156,7 @@ let App = () => {
           </div>
         </main>
         <aside className="w-1/4">
-          <ChangeCommandForm />
+          {clientId ? <ChangeCommandForm clientId={clientId} /> : null }
           <LineOptionsForm separators={lineSeparators}
                            setSeparators={setLineSeparators}
                            setRegex={setLineRegex}
