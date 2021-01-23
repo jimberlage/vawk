@@ -1,6 +1,7 @@
 interface ChunkMetadata {
     index: number,
     total: number,
+    id: number,
 };
 
 export interface OutputMessage {
@@ -26,13 +27,15 @@ let allocateMessage = (metadata: ChunkMetadata, data: string): OutputMessage => 
         filled: 0,
     };
 
-    addChunkToMessage(metadata, data, message);
+    if (metadata.total > 0) {
+        addChunkToMessage(metadata, data, message);
+    }
 
     return message;
 };
 
 let parseChunk = (chunk: string): [ChunkMetadata, string] => {
-    let parts = chunk.split('\n', 1);
+    let parts = chunk.split('\n', 2);
     if (parts.length !== 2) {
         throw new Error("Got a malformed message from the server");
     }
@@ -54,7 +57,11 @@ export let isComplete = (message: OutputMessage): boolean => {
     return message.filled === message.total;
 };
 
-export let combineChunks = (message: OutputMessage): string[][] => {
+export let combineStdoutChunks = (message: OutputMessage): string[][] => {
     let encodedTable = JSON.parse(message.chunks.join('')) as string[][];
     return encodedTable.map((encodedRow) => encodedRow.map((encodedCell) => atob(encodedCell)));
+};
+
+export let combineStderrChunks = (message: OutputMessage): string => {
+    return atob(message.chunks.join(''));
 };

@@ -48,7 +48,7 @@ fn encode_stdout(stdout: &Vec<Vec<Vec<u8>>>) -> Result<String, EncodingError> {
     Ok(serde_json::to_string(&base64_encoded)?)
 }
 
-fn chunked(encoded: &str, event_type: &str) -> Vec<web::Bytes> {
+fn chunked(encoded: &str, id: usize, event_type: &str) -> Vec<web::Bytes> {
     let mut chunk_size = 0usize;
     let mut chunks = vec![];
     let mut index = 0;
@@ -70,7 +70,7 @@ fn chunked(encoded: &str, event_type: &str) -> Vec<web::Bytes> {
             }
             chunks.push(web::Bytes::from(chunk.iter().collect::<String>()));
             index += 1;
-            chunk = format!("event: {}\ndata: {{\"index\": {}, \"total\": {}}}\ndata: ", event_type, index, total).chars().collect();
+            chunk = format!("event: {}\ndata: {{\"index\": {}, \"total\": {}, \"id\": {}}}\ndata: ", event_type, index, total, id).chars().collect();
         }
     }
 
@@ -84,16 +84,16 @@ fn chunked(encoded: &str, event_type: &str) -> Vec<web::Bytes> {
     chunks
 }
 
-pub fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>) -> Result<Vec<web::Bytes>, EncodingError> {
+pub fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>, id: usize) -> Result<Vec<web::Bytes>, EncodingError> {
     let encoded = encode_stdout(stdout)?;
-    Ok(chunked(&encoded, "stdout"))
+    Ok(chunked(&encoded, id, "stdout"))
 }
 
-pub fn stderr_chunks(stderr: &Vec<u8>) -> Result<Vec<web::Bytes>, EncodingError> {
+pub fn stderr_chunks(stderr: &Vec<u8>, id: usize) -> Result<Vec<web::Bytes>, EncodingError> {
     let encoded = encode_stderr(stderr)?;
-    Ok(chunked(&encoded, "stderr"))
+    Ok(chunked(&encoded, id, "stderr"))
 }
 
-pub fn status_message(status: &ExitStatus) -> web::Bytes {
-    web::Bytes::from(format!("event: status\ndata: {{\"status\": {}}}\n\n", status))
+pub fn status_message(status: &ExitStatus, id: usize) -> web::Bytes {
+    web::Bytes::from(format!("event: status\ndata: {{\"status\": {}, \"id\": {}}}\n\n", status, id))
 }

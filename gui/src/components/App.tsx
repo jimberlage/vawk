@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Form, Input, Tabs } from 'antd';
 import LineOptionsForm from './LineOptionsForm';
-import { OutputMessage, addChunk, isComplete, combineChunks } from '../parser';
+import { OutputMessage, addChunk, isComplete, combineStdoutChunks, combineStderrChunks } from '../parser';
 import 'antd/dist/antd.css';
 
 class InvalidServerEventError extends Error {
@@ -11,16 +11,14 @@ class InvalidServerEventError extends Error {
 }
 
 type RowProps = {
-  index: Number;
-  line: String;
+  index: number;
+  row: string[];
 };
 
 let Row = (props: RowProps) => {
   return (
     <tr>
-      <td>
-        {props.line}
-      </td>
+      {props.row.map((cell, index) => <td key={`${index}:${cell}`}>{cell}</td>)}
     </tr>
   );
 };
@@ -101,18 +99,27 @@ let App = () => {
   const [lineRegex, setLineRegex] = useState<string>('');
   const [lineIndices, setLineIndices] = useState<string>('');
 
+  const [updateStream, setUpdateStream] = useState<EventSource | undefined>(undefined);
   // Manages our current line buffer.
   const [stdout, setStdout] = useState<string[][] | undefined>(undefined);
   const [stderr, setStderr] = useState<string | undefined>(undefined);
   const [stdoutMessage, setStdoutMessage] = useState<OutputMessage | undefined>(undefined);
+  const [stderrMessage, setStderrMessage] = useState<OutputMessage | undefined>(undefined);
   // Allow for errors to be bubbled up.
   const [error, setError] = useState<Error | undefined>();
 
+  // Ensure that the update stream is closed when cleaned up.
+  useEffect(() => {
+    if (updateStream) {
+      return () => updateStream.close();
+    }
+  }, [updateStream]);
+
   // Listen for updates when the app is loaded (and cleanup after ourselves).
   useEffect(() => {
-    if (clientId) {
-      const updateStream = new EventSource(`http://localhost:6846/api/listen?client_id=${clientId}`);
-      updateStream.addEventListener('stdout', (event) => {
+    if (clientId && !updateStream) {
+      let source = new EventSource(`http://localhost:6846/api/listen?client_id=${clientId}`);
+      source.addEventListener('stdout', (event) => {
         if (!(event as MessageEvent)?.data) {
           setError(new InvalidServerEventError());
           return
@@ -121,32 +128,31 @@ let App = () => {
         // TODO: Use correct error type (InvalidServerEventError)
         let newStdoutMessage = addChunk((event as MessageEvent).data, stdoutMessage);
         if (isComplete(newStdoutMessage)) {
-          setStdout(combineChunks(newStdoutMessage));
+          setStdout(combineStdoutChunks(newStdoutMessage));
           setStdoutMessage(undefined);
         } else {
           setStdoutMessage(newStdoutMessage);
         }
       });
 
-      updateStream.addEventListener('stderr', (event) => {
+      source.addEventListener('stderr', (event) => {
         if (!(event as MessageEvent)?.data) {
           setError(new InvalidServerEventError());
           return
         }
 
-        let data = JSON.parse((event as MessageEvent).data);
-
-        if (!data?.stderr) {
-          setError(new InvalidServerEventError());
-          return
+        let newStderrMessage = addChunk((event as MessageEvent).data, stderrMessage);
+        if (isComplete(newStderrMessage)) {
+          setStderr(combineStderrChunks(newStderrMessage));
+          setStderrMessage(undefined);
+        } else {
+          setStderrMessage(newStderrMessage);
         }
-
-        setStderr(atob(data.stderr as string));
       });
 
-      return () => updateStream.close();
+      setUpdateStream(source);
     }
-  }, [clientId, stdoutMessage, setStdoutMessage, setStdout, setStderr]);
+  }, [clientId, updateStream, stdoutMessage, stderrMessage, setUpdateStream, setStdoutMessage, setStderrMessage, setStdout, setStderr]);
 
   return (
     <>
@@ -159,8 +165,8 @@ let App = () => {
                   <table className="font-mono table-auto">
                     <thead></thead>
                     <tbody>
-                      {[""].map((line, index) => (
-                        <Row key={`${index}:${line}`} line={line} index={index} />
+                      {stdout.map((row, index) => (
+                        <Row key={`${index}:${row}`} row={row} index={index} />
                       ))}
                     </tbody>
                   </table>

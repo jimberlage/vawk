@@ -14,6 +14,7 @@ use regex::bytes::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, BufReader, Read};
+use std::num::Wrapping;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::time::Instant;
 use tokio::sync::mpsc;
@@ -23,23 +24,29 @@ use ulid::Ulid;
 enum CommandStatus {
     Idle,
     Canceled {
+        id: usize,
         command: String,
     },
     Canceling {
+        id: usize,
         child: Child,
         command: String,
     },
     CancellationFailed {
+        id: usize,
         error: io::Error,
     },
     Running {
+        id: usize,
         child: Child,
         command: String,
     },
     Failed {
+        id: usize,
         error: io::Error,
     },
     Finished {
+        id: usize,
         command: String,
         status: ExitStatus,
         stderr: Vec<u8>,
@@ -72,12 +79,14 @@ impl ServerConnection {
 pub struct UnconnectedError {}
 
 pub struct CommandExecutor {
+    next_id: Wrapping<usize>,
     clients: HashMap<Ulid, ServerConnection>,
 }
 
 impl CommandExecutor {
     pub fn new() -> Self {
         CommandExecutor {
+            next_id: Wrapping(0usize),
             clients: HashMap::new(),
         }
     }
@@ -115,6 +124,7 @@ impl CommandExecutor {
             },
             Some(connnection) => {
                 if let CommandStatus::Finished {
+                    id,
                     command: _,
                     ref status,
                     ref stderr,
@@ -123,12 +133,12 @@ impl CommandExecutor {
                 {
                     let transformed_stdout =
                         transformers::transform_2d(&connnection.line_options, &connnection.row_options, stdout);
-                    match encoding::stdout_chunks(&transformed_stdout) {
+                    match encoding::stdout_chunks(&transformed_stdout, id) {
                         Err(error) => {
                             log::error!("Failed to encode stdout: client_id: {}, error: {:#?}", client_id, error);
                         },
                         Ok(stdout_chunks) => {
-                            match encoding::stderr_chunks(stderr) {
+                            match encoding::stderr_chunks(stderr, id) {
                                 Err(error) => {
                                     log::error!("Failed to encode stderr: client_id: {}, error: {:#?}", client_id, error);
                                 },
@@ -143,7 +153,7 @@ impl CommandExecutor {
                                             log::error!("Failed to send a chunk of stderr, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                         }
                                     }
-                                    if let Err(error) = connnection.sender.try_send(encoding::status_message(status)) {
+                                    if let Err(error) = connnection.sender.try_send(encoding::status_message(status, id)) {
                                         log::error!("Failed to send an exit status, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                     }
                                 },
@@ -160,6 +170,7 @@ impl CommandExecutor {
         for (client_id, connection) in self.clients.iter_mut() {
             match connection.status {
                 CommandStatus::Canceling {
+                    id,
                     ref mut child,
                     ref command,
                 } => {
@@ -167,22 +178,24 @@ impl CommandExecutor {
                         match error.kind() {
                             io::ErrorKind::InvalidInput => (),
                             _ => {
-                                connection.status = CommandStatus::Failed { error };
+                                connection.status = CommandStatus::Failed { id, error };
                                 continue;
                             }
                         }
                     }
 
                     connection.status = CommandStatus::Canceled {
+                        id,
                         command: command.into(),
                     };
                 }
                 CommandStatus::Running {
+                    id,
                     ref mut child,
                     ref command,
                 } => match child.try_wait() {
                     Err(error) => {
-                        connection.status = CommandStatus::Failed { error };
+                        connection.status = CommandStatus::Failed { id, error };
                     }
                     Ok(None) => (),
                     Ok(Some(status)) => {
@@ -192,7 +205,7 @@ impl CommandExecutor {
                                 let mut reader = BufReader::new(stderr);
                                 let mut bytes = vec![];
                                 if let Err(error) = reader.read_to_end(&mut bytes) {
-                                    connection.status = CommandStatus::Failed { error };
+                                    connection.status = CommandStatus::Failed { id, error };
                                     continue;
                                 };
                                 bytes
@@ -201,6 +214,7 @@ impl CommandExecutor {
                         match child.stdout {
                             None => {
                                 connection.status = CommandStatus::Finished {
+                                    id,
                                     command: command.into(),
                                     status,
                                     stderr,
@@ -212,10 +226,11 @@ impl CommandExecutor {
                                 let mut bytes = vec![];
                                 match reader.read_to_end(&mut bytes) {
                                     Err(error) => {
-                                        connection.status = CommandStatus::Failed { error };
+                                        connection.status = CommandStatus::Failed { id, error };
                                     }
                                     _ => {
                                         connection.status = CommandStatus::Finished {
+                                            id,
                                             command: command.into(),
                                             status,
                                             stderr,
@@ -250,6 +265,8 @@ impl CommandExecutor {
     }
 
     fn run(&mut self, client_id: &Ulid, command: String) -> Result<(), UnconnectedError> {
+        let id = self.next_id.0;
+        self.next_id = self.next_id + Wrapping(1usize);
         match self.clients.get_mut(client_id) {
             None => Err(UnconnectedError {}),
             Some(connection) => {
@@ -257,10 +274,11 @@ impl CommandExecutor {
                 // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
                 match Command::new("bash").args(vec!["-c", &command]).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
                     Err(error) => {
-                        connection.status = CommandStatus::Failed { error };
+                        connection.status = CommandStatus::Failed { id, error };
                     }
                     Ok(child) => {
                         connection.status = CommandStatus::Running {
+                            id,
                             command,
                             child,
                         };
@@ -276,13 +294,14 @@ impl CommandExecutor {
             None => Err(UnconnectedError {}),
             Some(mut connection) => {
                 connection.last_active = Instant::now();
-                if let CommandStatus::Running { mut child, command } = connection.status {
+                if let CommandStatus::Running { id, mut child, command } = connection.status {
                     match child.kill() {
                         Err(error) if error.kind() != io::ErrorKind::InvalidInput => {
-                            connection.status = CommandStatus::CancellationFailed { error };
+                            connection.status = CommandStatus::CancellationFailed { id, error };
                         }
                         _ => {
                             connection.status = CommandStatus::Canceling {
+                                id,
                                 child,
                                 command: command.clone(),
                             };
