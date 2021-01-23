@@ -95,5 +95,5 @@ pub fn stderr_chunks(stderr: &Vec<u8>) -> Result<Vec<web::Bytes>, EncodingError>
 }
 
 pub fn status_message(status: &ExitStatus) -> web::Bytes {
-    web::Bytes::from(format!("event: status\ndata: {{\"status\": {}}}\ndata: ", status))
+    web::Bytes::from(format!("event: status\ndata: {{\"status\": {}}}\n\n", status))
 }

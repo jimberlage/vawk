@@ -14,7 +14,7 @@ use regex::bytes::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, BufReader, Read};
-use std::process::{Child, Command, ExitStatus};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::time::Instant;
 use tokio::sync::mpsc;
 use ulid::Ulid;
@@ -255,7 +255,7 @@ impl CommandExecutor {
             Some(connection) => {
                 connection.last_active = Instant::now();
                 // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
-                match Command::new("bash").args(vec!["-c", &command]).spawn() {
+                match Command::new("bash").args(vec!["-c", &command]).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
                     Err(error) => {
                         connection.status = CommandStatus::Failed { error };
                     }
@@ -399,14 +399,6 @@ pub struct ClientConnection {
     receiver: mpsc::Receiver<web::Bytes>,
 }
 
-impl ClientConnection {
-    fn new(client_id: Ulid, receiver: mpsc::Receiver<web::Bytes>) -> Self {
-        ClientConnection {
-            receiver,
-        }
-    }
-}
-
 impl<A, M> MessageResponse<A, M> for ClientConnection
 where
     A: Actor,
@@ -426,7 +418,7 @@ impl Stream for ClientConnection {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| { dbg!(bytes.clone()); Ok(bytes) }))
+        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| { Ok(bytes) }))
     }
 }
 

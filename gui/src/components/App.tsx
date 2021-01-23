@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Form, Input, Tabs } from 'antd';
 import LineOptionsForm from './LineOptionsForm';
+import { OutputMessage, addChunk, isComplete, combineChunks } from '../parser';
 import 'antd/dist/antd.css';
 
 class InvalidServerEventError extends Error {
@@ -101,7 +102,9 @@ let App = () => {
   const [lineIndices, setLineIndices] = useState<string>('');
 
   // Manages our current line buffer.
-  const [stdout, setStdout] = useState<string | undefined>(undefined);
+  const [stdout, setStdout] = useState<string[][] | undefined>(undefined);
+  const [stderr, setStderr] = useState<string | undefined>(undefined);
+  const [stdoutMessage, setStdoutMessage] = useState<OutputMessage | undefined>(undefined);
   // Allow for errors to be bubbled up.
   const [error, setError] = useState<Error | undefined>();
 
@@ -109,24 +112,41 @@ let App = () => {
   useEffect(() => {
     if (clientId) {
       const updateStream = new EventSource(`http://localhost:6846/api/listen?client_id=${clientId}`);
-      updateStream.onmessage = (event) => {
-        if (!event?.data) {
+      updateStream.addEventListener('stdout', (event) => {
+        if (!(event as MessageEvent)?.data) {
           setError(new InvalidServerEventError());
           return
         }
-  
-        let data = JSON.parse(event.data);
-  
-        if (!data?.stdout) {
+
+        // TODO: Use correct error type (InvalidServerEventError)
+        let newStdoutMessage = addChunk((event as MessageEvent).data, stdoutMessage);
+        if (isComplete(newStdoutMessage)) {
+          setStdout(combineChunks(newStdoutMessage));
+          setStdoutMessage(undefined);
+        } else {
+          setStdoutMessage(newStdoutMessage);
+        }
+      });
+
+      updateStream.addEventListener('stderr', (event) => {
+        if (!(event as MessageEvent)?.data) {
           setError(new InvalidServerEventError());
           return
         }
-  
-        setStdout(atob(data.stdout as string));
-      };
+
+        let data = JSON.parse((event as MessageEvent).data);
+
+        if (!data?.stderr) {
+          setError(new InvalidServerEventError());
+          return
+        }
+
+        setStderr(atob(data.stderr as string));
+      });
+
       return () => updateStream.close();
     }
-  }, [clientId, setStdout]);
+  }, [clientId, stdoutMessage, setStdoutMessage, setStdout, setStderr]);
 
   return (
     <>
