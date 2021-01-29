@@ -65,9 +65,7 @@ pub fn parse_field_separators(
     for string_representation in string_representations {
         match field_separator(string_representation, &mut separators).finish() {
             Err(error) => return Err(InvalidFieldSeparatorError(error.input.to_owned())),
-            Ok((unconsumed_input, _))
-                if separators.is_empty() && !unconsumed_input.is_empty() =>
-            {
+            Ok((unconsumed_input, _)) if separators.is_empty() && !unconsumed_input.is_empty() => {
                 return Err(InvalidFieldSeparatorError(unconsumed_input.to_owned()))
             }
             _ => (),

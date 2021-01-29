@@ -56,7 +56,12 @@ fn chunked(encoded: &str, id: usize, event_type: &str) -> Vec<web::Bytes> {
     if encoded.len() % MAX_CHUNK_SIZE > 0 {
         total += 1;
     }
-    let mut chunk: Vec<char> = format!("event: {}\ndata: {{\"index\": {}, \"total\": {}}}\ndata: ", event_type, index, total).chars().collect();
+    let mut chunk: Vec<char> = format!(
+        "event: {}\ndata: {{\"index\": {}, \"total\": {}}}\ndata: ",
+        event_type, index, total
+    )
+    .chars()
+    .collect();
 
     // With base64 encoding & JSON, each char is one byte.
     // Each character is guaranteed to be ASCII.
@@ -70,7 +75,12 @@ fn chunked(encoded: &str, id: usize, event_type: &str) -> Vec<web::Bytes> {
             }
             chunks.push(web::Bytes::from(chunk.iter().collect::<String>()));
             index += 1;
-            chunk = format!("event: {}\ndata: {{\"index\": {}, \"total\": {}, \"id\": {}}}\ndata: ", event_type, index, total, id).chars().collect();
+            chunk = format!(
+                "event: {}\ndata: {{\"index\": {}, \"total\": {}, \"id\": {}}}\ndata: ",
+                event_type, index, total, id
+            )
+            .chars()
+            .collect();
         }
     }
 
@@ -84,7 +94,10 @@ fn chunked(encoded: &str, id: usize, event_type: &str) -> Vec<web::Bytes> {
     chunks
 }
 
-pub fn stdout_chunks(stdout: &Vec<Vec<Vec<u8>>>, id: usize) -> Result<Vec<web::Bytes>, EncodingError> {
+pub fn stdout_chunks(
+    stdout: &Vec<Vec<Vec<u8>>>,
+    id: usize,
+) -> Result<Vec<web::Bytes>, EncodingError> {
     let encoded = encode_stdout(stdout)?;
     Ok(chunked(&encoded, id, "stdout"))
 }
@@ -95,5 +108,8 @@ pub fn stderr_chunks(stderr: &Vec<u8>, id: usize) -> Result<Vec<web::Bytes>, Enc
 }
 
 pub fn status_message(status: &ExitStatus, id: usize) -> web::Bytes {
-    web::Bytes::from(format!("event: status\ndata: {{\"status\": {}, \"id\": {}}}\n\n", status, id))
+    web::Bytes::from(format!(
+        "event: status\ndata: {{\"status\": {}, \"id\": {}}}\n\n",
+        status, id
+    ))
 }

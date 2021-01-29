@@ -111,17 +111,20 @@ impl CommandExecutor {
                         connection.receiver = None;
                         self.clients.insert(*client_id, connection);
                         Ok(ClientConnection { receiver })
-                    },
+                    }
                 }
-            },
+            }
         }
     }
 
     fn process_output(&mut self, client_id: &Ulid) {
         match self.clients.get(client_id) {
             None => {
-                log::error!("A client that no longer exists was asked for output: client_id: {}", client_id);
-            },
+                log::error!(
+                    "A client that no longer exists was asked for output: client_id: {}",
+                    client_id
+                );
+            }
             Some(connnection) => {
                 if let CommandStatus::Finished {
                     id,
@@ -131,32 +134,44 @@ impl CommandExecutor {
                     ref stdout,
                 } = connnection.status
                 {
-                    let transformed_stdout =
-                        transformers::transform_2d(&connnection.line_options, &connnection.row_options, stdout);
+                    let transformed_stdout = transformers::transform_2d(
+                        &connnection.line_options,
+                        &connnection.row_options,
+                        stdout,
+                    );
                     match encoding::stdout_chunks(&transformed_stdout, id) {
                         Err(error) => {
-                            log::error!("Failed to encode stdout: client_id: {}, error: {:#?}", client_id, error);
-                        },
-                        Ok(stdout_chunks) => {
-                            match encoding::stderr_chunks(stderr, id) {
-                                Err(error) => {
-                                    log::error!("Failed to encode stderr: client_id: {}, error: {:#?}", client_id, error);
-                                },
-                                Ok(stderr_chunks) => {
-                                    for chunk in stdout_chunks {
-                                        if let Err(error) = connnection.sender.try_send(chunk) {
-                                            log::error!("Failed to send a chunk of stdout, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
-                                        }
+                            log::error!(
+                                "Failed to encode stdout: client_id: {}, error: {:#?}",
+                                client_id,
+                                error
+                            );
+                        }
+                        Ok(stdout_chunks) => match encoding::stderr_chunks(stderr, id) {
+                            Err(error) => {
+                                log::error!(
+                                    "Failed to encode stderr: client_id: {}, error: {:#?}",
+                                    client_id,
+                                    error
+                                );
+                            }
+                            Ok(stderr_chunks) => {
+                                for chunk in stdout_chunks {
+                                    if let Err(error) = connnection.sender.try_send(chunk) {
+                                        log::error!("Failed to send a chunk of stdout, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                     }
-                                    for chunk in stderr_chunks {
-                                        if let Err(error) = connnection.sender.try_send(chunk) {
-                                            log::error!("Failed to send a chunk of stderr, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
-                                        }
+                                }
+                                for chunk in stderr_chunks {
+                                    if let Err(error) = connnection.sender.try_send(chunk) {
+                                        log::error!("Failed to send a chunk of stderr, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
                                     }
-                                    if let Err(error) = connnection.sender.try_send(encoding::status_message(status, id)) {
-                                        log::error!("Failed to send an exit status, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
-                                    }
-                                },
+                                }
+                                if let Err(error) = connnection
+                                    .sender
+                                    .try_send(encoding::status_message(status, id))
+                                {
+                                    log::error!("Failed to send an exit status, client disconnected or there is too much chatter: client_id: {}, error: {:#?}", client_id, error);
+                                }
                             }
                         },
                     }
@@ -272,16 +287,17 @@ impl CommandExecutor {
             Some(connection) => {
                 connection.last_active = Instant::now();
                 // Running the command through `bash -c` allows the user to use environment variables, bash arg parsing, etc.
-                match Command::new("bash").args(vec!["-c", &command]).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
+                match Command::new("bash")
+                    .args(vec!["-c", &command])
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                {
                     Err(error) => {
                         connection.status = CommandStatus::Failed { id, error };
                     }
                     Ok(child) => {
-                        connection.status = CommandStatus::Running {
-                            id,
-                            command,
-                            child,
-                        };
+                        connection.status = CommandStatus::Running { id, command, child };
                     }
                 };
                 Ok(())
@@ -294,7 +310,12 @@ impl CommandExecutor {
             None => Err(UnconnectedError {}),
             Some(mut connection) => {
                 connection.last_active = Instant::now();
-                if let CommandStatus::Running { id, mut child, command } = connection.status {
+                if let CommandStatus::Running {
+                    id,
+                    mut child,
+                    command,
+                } = connection.status
+                {
                     match child.kill() {
                         Err(error) if error.kind() != io::ErrorKind::InvalidInput => {
                             connection.status = CommandStatus::CancellationFailed { id, error };
@@ -437,7 +458,9 @@ impl Stream for ClientConnection {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        self.receiver.poll_recv(cx).map(|bytes| bytes.map(|bytes| { Ok(bytes) }))
+        self.receiver
+            .poll_recv(cx)
+            .map(|bytes| bytes.map(|bytes| Ok(bytes)))
     }
 }
 
@@ -487,7 +510,9 @@ impl Handler<Connect> for CommandExecutor {
     type Result = ConnectResponse;
 
     fn handle(&mut self, _msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
-        ConnectResponse { client_id: self.connect() }
+        ConnectResponse {
+            client_id: self.connect(),
+        }
     }
 }
 
@@ -502,11 +527,7 @@ impl Message for ProcessOutput {
 impl Handler<ProcessOutput> for CommandExecutor {
     type Result = ();
 
-    fn handle(
-        &mut self,
-        msg: ProcessOutput,
-        _ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: ProcessOutput, _ctx: &mut Self::Context) -> Self::Result {
         self.process_output(&msg.client_id)
     }
 }
@@ -564,11 +585,7 @@ impl Message for SetLineIndexFilters {
 impl Handler<SetLineIndexFilters> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(
-        &mut self,
-        msg: SetLineIndexFilters,
-        ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: SetLineIndexFilters, ctx: &mut Self::Context) -> Self::Result {
         self.set_line_index_filters(&msg.client_id, msg.filters)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -589,11 +606,7 @@ impl Message for SetLineRegexFilter {
 impl Handler<SetLineRegexFilter> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(
-        &mut self,
-        msg: SetLineRegexFilter,
-        ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: SetLineRegexFilter, ctx: &mut Self::Context) -> Self::Result {
         self.set_line_regex_filter(&msg.client_id, msg.filter)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -614,11 +627,7 @@ impl Message for SetLineSeparators {
 impl Handler<SetLineSeparators> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(
-        &mut self,
-        msg: SetLineSeparators,
-        ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: SetLineSeparators, ctx: &mut Self::Context) -> Self::Result {
         self.set_line_separators(&msg.client_id, msg.separators)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -639,11 +648,7 @@ impl Message for SetRowIndexFilters {
 impl Handler<SetRowIndexFilters> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(
-        &mut self,
-        msg: SetRowIndexFilters,
-        ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: SetRowIndexFilters, ctx: &mut Self::Context) -> Self::Result {
         self.set_row_index_filters(&msg.client_id, msg.filters)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -664,11 +669,7 @@ impl Message for SetRowRegexFilter {
 impl Handler<SetRowRegexFilter> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(
-        &mut self,
-        msg: SetRowRegexFilter,
-        ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: SetRowRegexFilter, ctx: &mut Self::Context) -> Self::Result {
         self.set_row_regex_filter(&msg.client_id, msg.filter)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
@@ -689,11 +690,7 @@ impl Message for SetRowSeparators {
 impl Handler<SetRowSeparators> for CommandExecutor {
     type Result = Result<(), UnconnectedError>;
 
-    fn handle(
-        &mut self,
-        msg: SetRowSeparators,
-        ctx: &mut Self::Context,
-    ) -> Self::Result {
+    fn handle(&mut self, msg: SetRowSeparators, ctx: &mut Self::Context) -> Self::Result {
         self.set_row_separators(&msg.client_id, msg.separators)?;
         ctx.address().do_send(ProcessOutput {
             client_id: msg.client_id,
