@@ -8,16 +8,35 @@ use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
 use nom::Finish;
 use nom::IResult;
 use regex::bytes::Regex;
+use std::fmt;
 use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct InvalidFieldSeparatorError(String);
 
+impl fmt::Display for InvalidFieldSeparatorError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Got an invalid field separator:\n{}", self.0)
+    }
+}
+
 #[derive(Debug)]
 pub struct InvalidIndexFiltersError(String);
 
+impl fmt::Display for InvalidIndexFiltersError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Got invalid index filters:\n{}", self.0)
+    }
+}
+
 #[derive(Debug)]
 pub struct InvalidRegexFilterError(String);
+
+impl fmt::Display for InvalidRegexFilterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Got an invalid regex filter:\n{}", self.0)
+    }
+}
 
 /*********************************************************************************************************************
  * Rules for separating data                                                                                         *
@@ -58,12 +77,12 @@ fn field_separator<'a>(input: &'a str, byte_trie: &mut ByteTrie) -> IResult<&'a 
 
 /// Parses field separators from a string.
 pub fn parse_field_separators(
-    string_representations: &Vec<String>,
+    string_representations: &[String],
 ) -> Result<ByteTrie, InvalidFieldSeparatorError> {
     let mut separators = ByteTrie::new();
 
     for string_representation in string_representations {
-        match field_separator(string_representation, &mut separators).finish() {
+        match field_separator(string_representation.as_str(), &mut separators).finish() {
             Err(error) => return Err(InvalidFieldSeparatorError(error.input.to_owned())),
             Ok((unconsumed_input, _)) if separators.is_empty() && !unconsumed_input.is_empty() => {
                 return Err(InvalidFieldSeparatorError(unconsumed_input.to_owned()))

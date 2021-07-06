@@ -1,6 +1,8 @@
 use crate::byte_trie::{ByteTrie, Membership};
 use crate::parsers::IndexFilter;
+use csv;
 use regex::bytes::Regex;
+use std::io;
 
 pub struct Options {
     pub separators: Option<ByteTrie>,
@@ -80,7 +82,7 @@ fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn transform_1d(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
+fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
     let mut result = match options.separators {
         None => vec![data.clone()],
         Some(ref separators) => split(separators, data),
@@ -97,15 +99,33 @@ fn transform_1d(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
     result
 }
 
-pub fn transform_2d(
-    line_options: &Options,
-    row_options: &Options,
-    data: &Vec<u8>,
-) -> Vec<Vec<Vec<u8>>> {
-    transform_1d(line_options, data)
-        .iter()
-        .map(|line| transform_1d(row_options, line))
-        .collect()
+pub fn transform_output(column_options: &Options, row_options: &Options, data: &Vec<u8>) -> io::Result<Vec<u8>> {
+    let mut inner = vec![];
+    { // Scope so that inner does not get dropped when the writer does
+        let mut writer = csv::WriterBuilder::new().has_headers(false).from_writer(&mut inner);
+        let rows: Vec<Vec<Vec<u8>>> = split_into_records(column_options, data).iter_mut().map(|row_data| split_into_records(row_options, row_data)).collect();
+        let mut longest_number_of_cells = 0;
+
+        for row in &rows {
+            if row.len() > longest_number_of_cells {
+                longest_number_of_cells = row.len();
+            }
+        }
+
+        for mut row in rows {
+            // Pad cells so the UI doesn't have to.
+            if row.len() < longest_number_of_cells {
+                for _ in 0..(longest_number_of_cells - row.len()) {
+                    row.push(vec![]);
+                }
+            }
+
+            writer.write_record(row)?;
+        }
+
+        writer.flush()?;
+    }
+    Ok(inner)
 }
 
 #[cfg(test)]

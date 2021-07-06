@@ -1,0 +1,18 @@
+{
+    "name": "@jimberlage/shble",
+    "version": "1.0.0",
+    "devDependencies": {
+        "esbuild": "^0.12.15"
+    },
+    "dependencies": {
+        "@fluentui/react": "^8.23.0",
+        "google-protobuf": "^3.17.3",
+        "papaparse": "^5.3.1",
+        "react": "^17.0.2",
+        "react-dom": "^17.0.2"
+    },
+    "scripts": {
+        "build": "esbuild app.jsx --bundle --minify --sourcemap --target=es2017 --outfile=out.js",
+        "watch": "esbuild app.jsx --bundle --minify --sourcemap --target=es2017 --outfile=out.js --watch"
+    }
+}
