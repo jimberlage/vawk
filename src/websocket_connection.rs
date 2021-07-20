@@ -1,3 +1,11 @@
+use crate::parsers;
+use crate::protos::definitions::{
+    CompletedCommand, FromClient, FromClient_oneof_inner as FromClientInner, FromServer,
+    FromServer_oneof_inner as FromServerInner, RunCommand, SetColumnIndexFilters,
+    SetColumnRegexFilter, SetColumnSeparators, SetRowIndexFilters, SetRowRegexFilter,
+    SetRowSeparators, UnexpectedError,
+};
+use crate::transformers;
 /// This module provides an opinionated Websocket actor, suited to this project.
 ///
 /// It provides:
@@ -6,14 +14,10 @@
 /// - Actor shutdown on close messages
 ///
 /// For simplicity's sake, text messages are treated as binary.
-
 use actix::prelude::*;
 use actix_http::ws::{CloseCode, CloseReason, Item};
 use actix_web_actors::ws;
 use bytes::{Bytes, BytesMut};
-use crate::parsers;
-use crate::protos::definitions::{CompletedCommand, FromClient, FromClient_oneof_inner as FromClientInner, FromServer, FromServer_oneof_inner as FromServerInner, RunCommand, SetColumnIndexFilters, SetColumnRegexFilter, SetColumnSeparators, SetRowIndexFilters, SetRowRegexFilter, SetRowSeparators, UnexpectedError};
-use crate::transformers;
 use protobuf::{Message as ProtobufMessage, ProtobufError};
 use std::cell::RefCell;
 use std::fmt;
@@ -26,7 +30,11 @@ struct MessageParseError(ProtobufError);
 
 impl fmt::Display for MessageParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "An error occurred while parsing a message from the client:\n{}", self.0)
+        write!(
+            f,
+            "An error occurred while parsing a message from the client:\n{}",
+            self.0
+        )
     }
 }
 
@@ -46,7 +54,11 @@ enum CancelError {
 impl fmt::Display for CancelError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CancelError::KillError(error) => write!(f, "An error occurred while killing the current command process:\n{}", error),
+            CancelError::KillError(error) => write!(
+                f,
+                "An error occurred while killing the current command process:\n{}",
+                error
+            ),
         }
     }
 }
@@ -59,7 +71,11 @@ enum RunError {
 impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RunError::SpawnError(error) => write!(f, "An error occurred while spawning the current command process:\n{}", error),
+            RunError::SpawnError(error) => write!(
+                f,
+                "An error occurred while spawning the current command process:\n{}",
+                error
+            ),
         }
     }
 }
@@ -109,9 +125,7 @@ struct RunningCommandStatus {
 
 #[derive(Debug, Clone)]
 enum CommandStatus {
-    Canceled {
-        command: String,
-    },
+    Canceled { command: String },
     Canceling(CancelingCommandStatus),
     CancellationFailed,
     Failed,
@@ -131,7 +145,7 @@ pub struct WebsocketConnection {
     command_status: CommandStatus,
     should_resend_csv: bool,
     last_seen_heartbeat: Instant,
-    continuation_frame: Option<BytesMut>
+    continuation_frame: Option<BytesMut>,
 }
 
 const BUFFER_SIZE: usize = 5 * 1024;
@@ -163,7 +177,11 @@ impl WebsocketConnection {
         }
     }
 
-    fn send_error<T: fmt::Display>(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>, error: T) {
+    fn send_error<T: fmt::Display>(
+        &mut self,
+        ctx: &mut ws::WebsocketContext<WebsocketConnection>,
+        error: T,
+    ) {
         let mut error_response = FromServer::default();
         let mut error_wrapper = UnexpectedError::default();
         error_wrapper.set_description(format!("{}", error));
@@ -179,16 +197,28 @@ impl WebsocketConnection {
         }
     }
 
-    fn send_csvs(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>, status: ExitStatus, stdout: &Vec<u8>, stderr: &Vec<u8>) -> Result<(), WorkerError> {
-        let transformed_stdout = transformers::transform_output(&self.column_options, &self.row_options, &stdout).map_err(|error| WorkerError::TransformStdoutError(error))?;
-        
+    fn send_csvs(
+        &mut self,
+        ctx: &mut ws::WebsocketContext<WebsocketConnection>,
+        status: ExitStatus,
+        stdout: &Vec<u8>,
+        stderr: &Vec<u8>,
+    ) -> Result<(), WorkerError> {
+        let transformed_stdout =
+            transformers::transform_output(&self.column_options, &self.row_options, &stdout)
+                .map_err(|error| WorkerError::TransformStdoutError(error))?;
+
         let mut completed_command_response = FromServer::default();
         let mut completed_command_wrapper = CompletedCommand::default();
         completed_command_wrapper.set_was_successful(status.success());
         completed_command_wrapper.set_stdout(transformed_stdout);
         completed_command_wrapper.set_stderr(stderr.clone());
-        completed_command_response.inner = Some(FromServerInner::completed_command(completed_command_wrapper));
-        let encoded_completed_command_response = completed_command_response.write_to_bytes().map_err(|error| WorkerError::EncodeCommandError(error))?;
+        completed_command_response.inner = Some(FromServerInner::completed_command(
+            completed_command_wrapper,
+        ));
+        let encoded_completed_command_response = completed_command_response
+            .write_to_bytes()
+            .map_err(|error| WorkerError::EncodeCommandError(error))?;
 
         ctx.binary(encoded_completed_command_response);
 
@@ -197,7 +227,10 @@ impl WebsocketConnection {
         Ok(())
     }
 
-    fn on_canceling(&mut self, CancelingCommandStatus { child, command }: CancelingCommandStatus) -> Result<(), WorkerError> {
+    fn on_canceling(
+        &mut self,
+        CancelingCommandStatus { child, command }: CancelingCommandStatus,
+    ) -> Result<(), WorkerError> {
         if let Err(error) = (*child).borrow_mut().try_wait() {
             match error.kind() {
                 io::ErrorKind::InvalidInput => (),
@@ -215,19 +248,35 @@ impl WebsocketConnection {
         Ok(())
     }
 
-    fn on_running(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>, RunningCommandStatus { child, command, stderr, stdout }: RunningCommandStatus) -> Result<(), WorkerError> {
+    fn on_running(
+        &mut self,
+        ctx: &mut ws::WebsocketContext<WebsocketConnection>,
+        RunningCommandStatus {
+            child,
+            command,
+            stderr,
+            stdout,
+        }: RunningCommandStatus,
+    ) -> Result<(), WorkerError> {
         dbg!(command.clone());
         let mut finished_stderr = false;
         if let Some(stderr_handle) = (*child).borrow_mut().stderr.take() {
-            finished_stderr = read_and_extend(stderr_handle, (*stderr).borrow_mut().as_mut()).map_err(|error| WorkerError::ReadStderrError(error))?;
+            finished_stderr = read_and_extend(stderr_handle, (*stderr).borrow_mut().as_mut())
+                .map_err(|error| WorkerError::ReadStderrError(error))?;
         }
 
         let mut finished_stdout = false;
         if let Some(stdout_handle) = (*child).borrow_mut().stdout.take() {
-            finished_stdout = read_and_extend(stdout_handle, (*stdout).borrow_mut().as_mut()).map_err(|error| WorkerError::ReadStdoutError(error))?;
+            finished_stdout = read_and_extend(stdout_handle, (*stdout).borrow_mut().as_mut())
+                .map_err(|error| WorkerError::ReadStdoutError(error))?;
         }
 
-        let maybe_status = Some((*child).borrow_mut().wait().map_err(|error| WorkerError::WaitError(error))?);
+        let maybe_status = Some(
+            (*child)
+                .borrow_mut()
+                .wait()
+                .map_err(|error| WorkerError::WaitError(error))?,
+        );
         if let Some(status) = maybe_status {
             if finished_stderr && finished_stdout {
                 self.command_status = CommandStatus::Finished(FinishedCommandStatus {
@@ -236,7 +285,7 @@ impl WebsocketConnection {
                     stderr: Rc::new((*stderr).borrow().clone()),
                     stdout: Rc::new((*stdout).borrow().clone()),
                 });
-    
+
                 self.send_csvs(ctx, status, &(*stdout).borrow(), &(*stderr).borrow())?;
             }
         }
@@ -246,11 +295,19 @@ impl WebsocketConnection {
 
     fn check_status(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>) {
         let result = match self.command_status.clone() {
-            CommandStatus::Canceling(canceling_command_status) => self.on_canceling(canceling_command_status),
-            CommandStatus::Running(running_command_status) => self.on_running(ctx, running_command_status),
-            CommandStatus::Finished(finished_command_status) if self.should_resend_csv => {
-                self.send_csvs(ctx, finished_command_status.status, &finished_command_status.stdout, &finished_command_status.stderr)
-            },
+            CommandStatus::Canceling(canceling_command_status) => {
+                self.on_canceling(canceling_command_status)
+            }
+            CommandStatus::Running(running_command_status) => {
+                self.on_running(ctx, running_command_status)
+            }
+            CommandStatus::Finished(finished_command_status) if self.should_resend_csv => self
+                .send_csvs(
+                    ctx,
+                    finished_command_status.status,
+                    &finished_command_status.stdout,
+                    &finished_command_status.stderr,
+                ),
             _ => Ok(()),
         };
         if let Err(error) = result {
@@ -276,32 +333,38 @@ impl WebsocketConnection {
                     stdout: Rc::new(RefCell::new(vec![])),
                 });
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.command_status = CommandStatus::Failed;
                 Err(RunError::SpawnError(error))
-            },
+            }
         }
     }
 
     fn cancel(&mut self) -> Result<(), CancelError> {
         let (maybe_new_command_status, result) = match &self.command_status {
-            CommandStatus::Running(RunningCommandStatus { child, command, stderr: _, stdout: _ }) => {
+            CommandStatus::Running(RunningCommandStatus {
+                child,
+                command,
+                stderr: _,
+                stdout: _,
+            }) => {
                 match (**child).borrow_mut().kill() {
                     // Already canceled.
                     Err(error) if error.kind() == io::ErrorKind::InvalidInput => (None, Ok(())),
-                    Err(error) => (Some(CommandStatus::CancellationFailed), Err(CancelError::KillError(error))),
-                    Ok(()) => {
-                        (
-                            Some(CommandStatus::Canceling(CancelingCommandStatus {
-                                child: child.clone(),
-                                command: command.clone(),
-                            })),
-                            Ok(())
-                        )
-                    },
+                    Err(error) => (
+                        Some(CommandStatus::CancellationFailed),
+                        Err(CancelError::KillError(error)),
+                    ),
+                    Ok(()) => (
+                        Some(CommandStatus::Canceling(CancelingCommandStatus {
+                            child: child.clone(),
+                            command: command.clone(),
+                        })),
+                        Ok(()),
+                    ),
                 }
-            },
+            }
             _ => (None, Ok(())),
         };
 
@@ -312,139 +375,155 @@ impl WebsocketConnection {
         result
     }
 
-    fn set_column_index_filters(&mut self, filters: SetColumnIndexFilters) -> Result<(), parsers::InvalidIndexFiltersError> {
+    fn set_column_index_filters(
+        &mut self,
+        filters: SetColumnIndexFilters,
+    ) -> Result<(), parsers::InvalidIndexFiltersError> {
         self.should_resend_csv = true;
         match parsers::parse_index_filters(filters.get_filters()) {
             Ok(parsed_filters) => {
                 self.column_options.index_filters = Some(parsed_filters);
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.column_options.index_filters = None;
                 Err(error)
-            },
+            }
         }
     }
 
-    fn set_column_regex_filter(&mut self, filter: SetColumnRegexFilter) -> Result<(), parsers::InvalidRegexFilterError> {
+    fn set_column_regex_filter(
+        &mut self,
+        filter: SetColumnRegexFilter,
+    ) -> Result<(), parsers::InvalidRegexFilterError> {
         self.should_resend_csv = true;
         match parsers::parse_regex_filter(filter.get_filter()) {
             Ok(parsed_filter) => {
                 self.column_options.regex_filter = Some(parsed_filter);
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.column_options.regex_filter = None;
                 Err(error)
-            },
+            }
         }
     }
 
-    fn set_column_separators(&mut self, separators: SetColumnSeparators) -> Result<(), parsers::InvalidFieldSeparatorError> {
+    fn set_column_separators(
+        &mut self,
+        separators: SetColumnSeparators,
+    ) -> Result<(), parsers::InvalidFieldSeparatorError> {
         self.should_resend_csv = true;
         match parsers::parse_field_separators(separators.get_separators()) {
             Ok(parsed_separators) => {
                 self.column_options.separators = Some(parsed_separators);
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.column_options.separators = None;
                 Err(error)
-            },
+            }
         }
     }
 
-    fn set_row_index_filters(&mut self, filters: SetRowIndexFilters) -> Result<(), parsers::InvalidIndexFiltersError> {
+    fn set_row_index_filters(
+        &mut self,
+        filters: SetRowIndexFilters,
+    ) -> Result<(), parsers::InvalidIndexFiltersError> {
         self.should_resend_csv = true;
         match parsers::parse_index_filters(filters.get_filters()) {
             Ok(parsed_filters) => {
                 self.row_options.index_filters = Some(parsed_filters);
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.row_options.index_filters = None;
                 Err(error)
-            },
+            }
         }
     }
 
-    fn set_row_regex_filter(&mut self, filter: SetRowRegexFilter) -> Result<(), parsers::InvalidRegexFilterError> {
+    fn set_row_regex_filter(
+        &mut self,
+        filter: SetRowRegexFilter,
+    ) -> Result<(), parsers::InvalidRegexFilterError> {
         self.should_resend_csv = true;
         match parsers::parse_regex_filter(filter.get_filter()) {
             Ok(parsed_filter) => {
                 self.row_options.regex_filter = Some(parsed_filter);
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.row_options.regex_filter = None;
                 Err(error)
-            },
+            }
         }
     }
 
-    fn set_row_separators(&mut self, separators: SetRowSeparators) -> Result<(), parsers::InvalidFieldSeparatorError> {
+    fn set_row_separators(
+        &mut self,
+        separators: SetRowSeparators,
+    ) -> Result<(), parsers::InvalidFieldSeparatorError> {
         self.should_resend_csv = true;
         match parsers::parse_field_separators(separators.get_separators()) {
             Ok(parsed_separators) => {
                 self.row_options.separators = Some(parsed_separators);
                 Ok(())
-            },
+            }
             Err(error) => {
                 self.row_options.separators = None;
                 Err(error)
-            },
+            }
         }
     }
 
     fn handle_message(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>, data: Bytes) {
         match FromClient::parse_from_bytes(&data.to_vec()) {
-            Ok(message) => {
-                match message.inner {
-                    Some(FromClientInner::cancel_command(_cancel_command)) => {
-                        if let Err(error) = self.cancel() {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::run_command(run_command)) => {
-                        if let Err(error) = self.run(run_command) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::set_column_index_filters(set_column_index_filters)) => {
-                        if let Err(error) = self.set_column_index_filters(set_column_index_filters) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::set_column_regex_filter(set_column_regex_filter)) => {
-                        if let Err(error) = self.set_column_regex_filter(set_column_regex_filter) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::set_column_separators(set_column_separators)) => {
-                        if let Err(error) = self.set_column_separators(set_column_separators) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::set_row_index_filters(set_row_index_filters)) => {
-                        if let Err(error) = self.set_row_index_filters(set_row_index_filters) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::set_row_regex_filter(set_row_regex_filter)) => {
-                        if let Err(error) = self.set_row_regex_filter(set_row_regex_filter) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    Some(FromClientInner::set_row_separators(set_row_separators)) => {
-                        if let Err(error) = self.set_row_separators(set_row_separators) {
-                            self.send_error(ctx, error);
-                        }
-                    },
-                    None => {
-                        self.send_error(ctx, EmptyMessageError);
+            Ok(message) => match message.inner {
+                Some(FromClientInner::cancel_command(_cancel_command)) => {
+                    if let Err(error) = self.cancel() {
+                        self.send_error(ctx, error);
                     }
                 }
-            }
+                Some(FromClientInner::run_command(run_command)) => {
+                    if let Err(error) = self.run(run_command) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                Some(FromClientInner::set_column_index_filters(set_column_index_filters)) => {
+                    if let Err(error) = self.set_column_index_filters(set_column_index_filters) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                Some(FromClientInner::set_column_regex_filter(set_column_regex_filter)) => {
+                    if let Err(error) = self.set_column_regex_filter(set_column_regex_filter) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                Some(FromClientInner::set_column_separators(set_column_separators)) => {
+                    if let Err(error) = self.set_column_separators(set_column_separators) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                Some(FromClientInner::set_row_index_filters(set_row_index_filters)) => {
+                    if let Err(error) = self.set_row_index_filters(set_row_index_filters) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                Some(FromClientInner::set_row_regex_filter(set_row_regex_filter)) => {
+                    if let Err(error) = self.set_row_regex_filter(set_row_regex_filter) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                Some(FromClientInner::set_row_separators(set_row_separators)) => {
+                    if let Err(error) = self.set_row_separators(set_row_separators) {
+                        self.send_error(ctx, error);
+                    }
+                }
+                None => {
+                    self.send_error(ctx, EmptyMessageError);
+                }
+            },
             Err(error) => {
                 self.send_error(ctx, MessageParseError(error));
             }
@@ -479,7 +558,10 @@ impl WebsocketConnection {
         }
     }
 
-    fn send_full_continuation_frame(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>) {
+    fn send_full_continuation_frame(
+        &mut self,
+        ctx: &mut ws::WebsocketContext<WebsocketConnection>,
+    ) {
         if let Some(ref data) = self.continuation_frame {
             let frozen_data = data.clone().freeze();
             self.handle_message(ctx, frozen_data);
@@ -509,26 +591,22 @@ impl Actor for WebsocketConnection {
 }
 
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnection {
-    fn handle(
-        &mut self,
-        msg: Result<ws::Message, ws::ProtocolError>,
-        ctx: &mut Self::Context,
-    ) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
-            Ok(ws::Message::Nop) => {},
+            Ok(ws::Message::Nop) => {}
             Ok(ws::Message::Continuation(Item::FirstText(data))) => {
                 self.set_first_frame_part(data);
-            },
+            }
             Ok(ws::Message::Continuation(Item::FirstBinary(data))) => {
                 self.set_first_frame_part(data);
-            },
+            }
             Ok(ws::Message::Continuation(Item::Continue(additional_data))) => {
                 self.set_frame_part(additional_data);
-            },
+            }
             Ok(ws::Message::Continuation(Item::Last(additional_data))) => {
                 self.set_last_frame_part(additional_data);
                 self.send_full_continuation_frame(ctx);
-            },
+            }
             Ok(ws::Message::Ping(data)) => {
                 self.last_seen_heartbeat = Instant::now();
                 ctx.pong(&data);
@@ -540,10 +618,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
                 let mut data = BytesMut::new();
                 data.extend(text.bytes());
                 self.handle_message(ctx, data.freeze());
-            },
+            }
             Ok(ws::Message::Binary(data)) => {
                 self.handle_message(ctx, data);
-            },
+            }
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
@@ -552,7 +630,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
                 log::error!("{}", error);
                 ctx.close(Some(CloseReason::from(CloseCode::Error)));
                 ctx.stop();
-            },
+            }
         }
     }
 }

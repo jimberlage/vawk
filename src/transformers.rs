@@ -99,11 +99,21 @@ fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
     result
 }
 
-pub fn transform_output(column_options: &Options, row_options: &Options, data: &Vec<u8>) -> io::Result<Vec<u8>> {
+pub fn transform_output(
+    column_options: &Options,
+    row_options: &Options,
+    data: &Vec<u8>,
+) -> io::Result<Vec<u8>> {
     let mut inner = vec![];
-    { // Scope so that inner does not get dropped when the writer does
-        let mut writer = csv::WriterBuilder::new().has_headers(false).from_writer(&mut inner);
-        let rows: Vec<Vec<Vec<u8>>> = split_into_records(column_options, data).iter_mut().map(|row_data| split_into_records(row_options, row_data)).collect();
+    {
+        // Scope so that inner does not get dropped when the writer does
+        let mut writer = csv::WriterBuilder::new()
+            .has_headers(false)
+            .from_writer(&mut inner);
+        let rows: Vec<Vec<Vec<u8>>> = split_into_records(column_options, data)
+            .iter_mut()
+            .map(|row_data| split_into_records(row_options, row_data))
+            .collect();
         let mut longest_number_of_cells = 0;
 
         for row in &rows {
