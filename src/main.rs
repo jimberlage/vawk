@@ -6,7 +6,6 @@ mod websocket_connection;
 
 use actix::clock;
 use actix_cors::Cors;
-use actix_files;
 use actix_web::middleware::Logger;
 use actix_web::web;
 use actix_web_actors::ws;
@@ -30,12 +29,21 @@ fn open_gui(socket_address: &str) -> io::Result<()> {
     }
 }
 
+struct Context {
+    bundled_html: String,
+    bundled_js: String,
+    bundled_js_map: String,
+    stdin: Vec<u8>,
+}
+
 async fn connect(
     r: actix_web::HttpRequest,
     stream: web::Payload,
+    context: web::Data<Context>,
 ) -> Result<actix_web::HttpResponse, actix_web::Error> {
     ws::start(
         websocket_connection::WebsocketConnection::new(
+            context.stdin.clone(),
             transformers::Options::default(),
             transformers::Options::default(),
         ),
@@ -44,14 +52,44 @@ async fn connect(
     )
 }
 
-async fn run_server(stdin: &Vec<u8>, socket_address: &str) -> io::Result<()> {
-    let html = include_bytes!("../ui/index.html");
-    let js = include_bytes!("../ui/out.js");
-    
+#[actix_web::get("/")]
+async fn index(context: web::Data<Context>) -> impl actix_web::Responder {
+    actix_web::HttpResponse::Ok()
+        .content_type("text/html")
+        .body(context.bundled_html.clone())
+}
+
+#[actix_web::get("/out.js")]
+async fn index_js(context: web::Data<Context>) -> impl actix_web::Responder {
+    actix_web::HttpResponse::Ok()
+        .content_type("text/javascript")
+        .body(context.bundled_js.clone())
+}
+
+#[actix_web::get("/out.js.map")]
+async fn index_js_map(context: web::Data<Context>) -> impl actix_web::Responder {
+    actix_web::HttpResponse::Ok()
+        .content_type("application/octet-stream")
+        .body(context.bundled_js_map.clone())
+}
+
+async fn run_server(stdin: Vec<u8>, socket_address: &str) -> io::Result<()> {
+    let html = include_str!("../ui/index.html");
+    let js = include_str!("../ui/out.js");
+    let js_map = include_str!("../ui/out.js.map");
+
     let server = actix_web::HttpServer::new(move || {
         actix_web::App::new()
+            .data(Context {
+                bundled_html: html.to_owned(),
+                bundled_js: js.to_owned(),
+                bundled_js_map: js_map.to_owned(),
+                stdin: stdin.clone(),
+            })
             .service(web::resource("/ws/").route(web::get().to(connect)))
-            .service(actix_files::Files::new("/", "../client/").index_file("index.html"))
+            .service(index)
+            .service(index_js)
+            .service(index_js_map)
             .wrap(Logger::default())
             .wrap(Cors::permissive())
     })
@@ -78,13 +116,11 @@ async fn main() {
         log::error!("Failed to read command input:\n{}", error);
     }
 
-    dbg!(String::from_utf8(stdin));
-
     // TODO: Add CLI helpers and configure port.
     let port = 6846;
     let socket_address = format!("127.0.0.1:{}", port);
 
-    if let Err(error) = run_server(&vec![], &socket_address).await {
+    if let Err(error) = run_server(stdin, &socket_address).await {
         log::error!("Failed to start server:\n{}", error);
     }
 }

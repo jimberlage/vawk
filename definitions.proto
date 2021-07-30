@@ -1,20 +1,23 @@
 syntax = "proto3";
 
-message CompletedCommand {
-    bytes stdout = 1;
-    bytes stderr = 2;
-    bool was_successful = 3;
-}
-
 message UnexpectedError {
     string description = 1;
 }
 
 message FromServer {
     oneof inner {
-        CompletedCommand completed_command = 1;
+        bytes output = 1;
         UnexpectedError unexpected_error = 2;
     }
+}
+
+message Initialize {
+    string row_index_filters = 1;
+    string row_regex_filter = 2;
+    repeated string row_separators = 3;
+    string column_index_filters = 4;
+    string column_regex_filter = 5;
+    repeated string column_separators = 6;
 }
 
 message SetRowIndexFilters {
@@ -41,21 +44,14 @@ message SetColumnSeparators {
     repeated string separators = 1;
 }
 
-message RunCommand {
-    string command = 1;
-}
-
-message CancelCommand {}
-
 message FromClient {
     oneof inner {
-        SetRowIndexFilters set_row_index_filters = 1;
-        SetRowRegexFilter set_row_regex_filter = 2;
-        SetRowSeparators set_row_separators = 3;
-        SetColumnIndexFilters set_column_index_filters = 4;
-        SetColumnRegexFilter set_column_regex_filter = 5;
-        SetColumnSeparators set_column_separators = 6;
-        RunCommand run_command = 7;
-        CancelCommand cancel_command = 8;
+        Initialize initialize = 1;
+        SetRowIndexFilters set_row_index_filters = 2;
+        SetRowRegexFilter set_row_regex_filter = 3;
+        SetRowSeparators set_row_separators = 4;
+        SetColumnIndexFilters set_column_index_filters = 5;
+        SetColumnRegexFilter set_column_regex_filter = 6;
+        SetColumnSeparators set_column_separators = 7;
     }
 }

@@ -25,245 +25,6 @@
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct CompletedCommand {
-    // message fields
-    pub stdout: ::std::vec::Vec<u8>,
-    pub stderr: ::std::vec::Vec<u8>,
-    pub was_successful: bool,
-    // special fields
-    #[cfg_attr(feature = "with-serde", serde(skip))]
-    pub unknown_fields: ::protobuf::UnknownFields,
-    #[cfg_attr(feature = "with-serde", serde(skip))]
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a CompletedCommand {
-    fn default() -> &'a CompletedCommand {
-        <CompletedCommand as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl CompletedCommand {
-    pub fn new() -> CompletedCommand {
-        ::std::default::Default::default()
-    }
-
-    // bytes stdout = 1;
-
-
-    pub fn get_stdout(&self) -> &[u8] {
-        &self.stdout
-    }
-    pub fn clear_stdout(&mut self) {
-        self.stdout.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_stdout(&mut self, v: ::std::vec::Vec<u8>) {
-        self.stdout = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_stdout(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.stdout
-    }
-
-    // Take field
-    pub fn take_stdout(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.stdout, ::std::vec::Vec::new())
-    }
-
-    // bytes stderr = 2;
-
-
-    pub fn get_stderr(&self) -> &[u8] {
-        &self.stderr
-    }
-    pub fn clear_stderr(&mut self) {
-        self.stderr.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_stderr(&mut self, v: ::std::vec::Vec<u8>) {
-        self.stderr = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_stderr(&mut self) -> &mut ::std::vec::Vec<u8> {
-        &mut self.stderr
-    }
-
-    // Take field
-    pub fn take_stderr(&mut self) -> ::std::vec::Vec<u8> {
-        ::std::mem::replace(&mut self.stderr, ::std::vec::Vec::new())
-    }
-
-    // bool was_successful = 3;
-
-
-    pub fn get_was_successful(&self) -> bool {
-        self.was_successful
-    }
-    pub fn clear_was_successful(&mut self) {
-        self.was_successful = false;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_was_successful(&mut self, v: bool) {
-        self.was_successful = v;
-    }
-}
-
-impl ::protobuf::Message for CompletedCommand {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.stdout)?;
-                },
-                2 => {
-                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.stderr)?;
-                },
-                3 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_bool()?;
-                    self.was_successful = tmp;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.stdout.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(1, &self.stdout);
-        }
-        if !self.stderr.is_empty() {
-            my_size += ::protobuf::rt::bytes_size(2, &self.stderr);
-        }
-        if self.was_successful != false {
-            my_size += 2;
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.stdout.is_empty() {
-            os.write_bytes(1, &self.stdout)?;
-        }
-        if !self.stderr.is_empty() {
-            os.write_bytes(2, &self.stderr)?;
-        }
-        if self.was_successful != false {
-            os.write_bool(3, self.was_successful)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> CompletedCommand {
-        CompletedCommand::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                "stdout",
-                |m: &CompletedCommand| { &m.stdout },
-                |m: &mut CompletedCommand| { &mut m.stdout },
-            ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
-                "stderr",
-                |m: &CompletedCommand| { &m.stderr },
-                |m: &mut CompletedCommand| { &mut m.stderr },
-            ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
-                "was_successful",
-                |m: &CompletedCommand| { &m.was_successful },
-                |m: &mut CompletedCommand| { &mut m.was_successful },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<CompletedCommand>(
-                "CompletedCommand",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static CompletedCommand {
-        static instance: ::protobuf::rt::LazyV2<CompletedCommand> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(CompletedCommand::new)
-    }
-}
-
-impl ::protobuf::Clear for CompletedCommand {
-    fn clear(&mut self) {
-        self.stdout.clear();
-        self.stderr.clear();
-        self.was_successful = false;
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for CompletedCommand {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for CompletedCommand {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct UnexpectedError {
     // message fields
     pub description: ::std::string::String,
@@ -445,7 +206,7 @@ impl<'a> ::std::default::Default for &'a FromServer {
 #[derive(Clone,PartialEq,Debug)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum FromServer_oneof_inner {
-    completed_command(CompletedCommand),
+    output(::std::vec::Vec<u8>),
     unexpected_error(UnexpectedError),
 }
 
@@ -454,52 +215,52 @@ impl FromServer {
         ::std::default::Default::default()
     }
 
-    // .CompletedCommand completed_command = 1;
+    // bytes output = 1;
 
 
-    pub fn get_completed_command(&self) -> &CompletedCommand {
+    pub fn get_output(&self) -> &[u8] {
         match self.inner {
-            ::std::option::Option::Some(FromServer_oneof_inner::completed_command(ref v)) => v,
-            _ => <CompletedCommand as ::protobuf::Message>::default_instance(),
+            ::std::option::Option::Some(FromServer_oneof_inner::output(ref v)) => v,
+            _ => &[],
         }
     }
-    pub fn clear_completed_command(&mut self) {
+    pub fn clear_output(&mut self) {
         self.inner = ::std::option::Option::None;
     }
 
-    pub fn has_completed_command(&self) -> bool {
+    pub fn has_output(&self) -> bool {
         match self.inner {
-            ::std::option::Option::Some(FromServer_oneof_inner::completed_command(..)) => true,
+            ::std::option::Option::Some(FromServer_oneof_inner::output(..)) => true,
             _ => false,
         }
     }
 
     // Param is passed by value, moved
-    pub fn set_completed_command(&mut self, v: CompletedCommand) {
-        self.inner = ::std::option::Option::Some(FromServer_oneof_inner::completed_command(v))
+    pub fn set_output(&mut self, v: ::std::vec::Vec<u8>) {
+        self.inner = ::std::option::Option::Some(FromServer_oneof_inner::output(v))
     }
 
     // Mutable pointer to the field.
-    pub fn mut_completed_command(&mut self) -> &mut CompletedCommand {
-        if let ::std::option::Option::Some(FromServer_oneof_inner::completed_command(_)) = self.inner {
+    pub fn mut_output(&mut self) -> &mut ::std::vec::Vec<u8> {
+        if let ::std::option::Option::Some(FromServer_oneof_inner::output(_)) = self.inner {
         } else {
-            self.inner = ::std::option::Option::Some(FromServer_oneof_inner::completed_command(CompletedCommand::new()));
+            self.inner = ::std::option::Option::Some(FromServer_oneof_inner::output(::std::vec::Vec::new()));
         }
         match self.inner {
-            ::std::option::Option::Some(FromServer_oneof_inner::completed_command(ref mut v)) => v,
+            ::std::option::Option::Some(FromServer_oneof_inner::output(ref mut v)) => v,
             _ => panic!(),
         }
     }
 
     // Take field
-    pub fn take_completed_command(&mut self) -> CompletedCommand {
-        if self.has_completed_command() {
+    pub fn take_output(&mut self) -> ::std::vec::Vec<u8> {
+        if self.has_output() {
             match self.inner.take() {
-                ::std::option::Option::Some(FromServer_oneof_inner::completed_command(v)) => v,
+                ::std::option::Option::Some(FromServer_oneof_inner::output(v)) => v,
                 _ => panic!(),
             }
         } else {
-            CompletedCommand::new()
+            ::std::vec::Vec::new()
         }
     }
 
@@ -555,11 +316,6 @@ impl FromServer {
 
 impl ::protobuf::Message for FromServer {
     fn is_initialized(&self) -> bool {
-        if let Some(FromServer_oneof_inner::completed_command(ref v)) = self.inner {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
         if let Some(FromServer_oneof_inner::unexpected_error(ref v)) = self.inner {
             if !v.is_initialized() {
                 return false;
@@ -576,7 +332,7 @@ impl ::protobuf::Message for FromServer {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromServer_oneof_inner::completed_command(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromServer_oneof_inner::output(is.read_bytes()?));
                 },
                 2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
@@ -598,9 +354,8 @@ impl ::protobuf::Message for FromServer {
         let mut my_size = 0;
         if let ::std::option::Option::Some(ref v) = self.inner {
             match v {
-                &FromServer_oneof_inner::completed_command(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                &FromServer_oneof_inner::output(ref v) => {
+                    my_size += ::protobuf::rt::bytes_size(1, &v);
                 },
                 &FromServer_oneof_inner::unexpected_error(ref v) => {
                     let len = v.compute_size();
@@ -616,10 +371,8 @@ impl ::protobuf::Message for FromServer {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if let ::std::option::Option::Some(ref v) = self.inner {
             match v {
-                &FromServer_oneof_inner::completed_command(ref v) => {
-                    os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
+                &FromServer_oneof_inner::output(ref v) => {
+                    os.write_bytes(1, v)?;
                 },
                 &FromServer_oneof_inner::unexpected_error(ref v) => {
                     os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
@@ -666,10 +419,10 @@ impl ::protobuf::Message for FromServer {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, CompletedCommand>(
-                "completed_command",
-                FromServer::has_completed_command,
-                FromServer::get_completed_command,
+            fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor::<_>(
+                "output",
+                FromServer::has_output,
+                FromServer::get_output,
             ));
             fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, UnexpectedError>(
                 "unexpected_error",
@@ -705,6 +458,376 @@ impl ::std::fmt::Debug for FromServer {
 }
 
 impl ::protobuf::reflect::ProtobufValue for FromServer {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct Initialize {
+    // message fields
+    pub row_index_filters: ::std::string::String,
+    pub row_regex_filter: ::std::string::String,
+    pub row_separators: ::protobuf::RepeatedField<::std::string::String>,
+    pub column_index_filters: ::std::string::String,
+    pub column_regex_filter: ::std::string::String,
+    pub column_separators: ::protobuf::RepeatedField<::std::string::String>,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Initialize {
+    fn default() -> &'a Initialize {
+        <Initialize as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Initialize {
+    pub fn new() -> Initialize {
+        ::std::default::Default::default()
+    }
+
+    // string row_index_filters = 1;
+
+
+    pub fn get_row_index_filters(&self) -> &str {
+        &self.row_index_filters
+    }
+    pub fn clear_row_index_filters(&mut self) {
+        self.row_index_filters.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_row_index_filters(&mut self, v: ::std::string::String) {
+        self.row_index_filters = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_row_index_filters(&mut self) -> &mut ::std::string::String {
+        &mut self.row_index_filters
+    }
+
+    // Take field
+    pub fn take_row_index_filters(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.row_index_filters, ::std::string::String::new())
+    }
+
+    // string row_regex_filter = 2;
+
+
+    pub fn get_row_regex_filter(&self) -> &str {
+        &self.row_regex_filter
+    }
+    pub fn clear_row_regex_filter(&mut self) {
+        self.row_regex_filter.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_row_regex_filter(&mut self, v: ::std::string::String) {
+        self.row_regex_filter = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_row_regex_filter(&mut self) -> &mut ::std::string::String {
+        &mut self.row_regex_filter
+    }
+
+    // Take field
+    pub fn take_row_regex_filter(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.row_regex_filter, ::std::string::String::new())
+    }
+
+    // repeated string row_separators = 3;
+
+
+    pub fn get_row_separators(&self) -> &[::std::string::String] {
+        &self.row_separators
+    }
+    pub fn clear_row_separators(&mut self) {
+        self.row_separators.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_row_separators(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.row_separators = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_row_separators(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.row_separators
+    }
+
+    // Take field
+    pub fn take_row_separators(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.row_separators, ::protobuf::RepeatedField::new())
+    }
+
+    // string column_index_filters = 4;
+
+
+    pub fn get_column_index_filters(&self) -> &str {
+        &self.column_index_filters
+    }
+    pub fn clear_column_index_filters(&mut self) {
+        self.column_index_filters.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_column_index_filters(&mut self, v: ::std::string::String) {
+        self.column_index_filters = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_column_index_filters(&mut self) -> &mut ::std::string::String {
+        &mut self.column_index_filters
+    }
+
+    // Take field
+    pub fn take_column_index_filters(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.column_index_filters, ::std::string::String::new())
+    }
+
+    // string column_regex_filter = 5;
+
+
+    pub fn get_column_regex_filter(&self) -> &str {
+        &self.column_regex_filter
+    }
+    pub fn clear_column_regex_filter(&mut self) {
+        self.column_regex_filter.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_column_regex_filter(&mut self, v: ::std::string::String) {
+        self.column_regex_filter = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_column_regex_filter(&mut self) -> &mut ::std::string::String {
+        &mut self.column_regex_filter
+    }
+
+    // Take field
+    pub fn take_column_regex_filter(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.column_regex_filter, ::std::string::String::new())
+    }
+
+    // repeated string column_separators = 6;
+
+
+    pub fn get_column_separators(&self) -> &[::std::string::String] {
+        &self.column_separators
+    }
+    pub fn clear_column_separators(&mut self) {
+        self.column_separators.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_column_separators(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.column_separators = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_column_separators(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.column_separators
+    }
+
+    // Take field
+    pub fn take_column_separators(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.column_separators, ::protobuf::RepeatedField::new())
+    }
+}
+
+impl ::protobuf::Message for Initialize {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.row_index_filters)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.row_regex_filter)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.row_separators)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_index_filters)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_regex_filter)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.column_separators)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.row_index_filters.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.row_index_filters);
+        }
+        if !self.row_regex_filter.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.row_regex_filter);
+        }
+        for value in &self.row_separators {
+            my_size += ::protobuf::rt::string_size(3, &value);
+        };
+        if !self.column_index_filters.is_empty() {
+            my_size += ::protobuf::rt::string_size(4, &self.column_index_filters);
+        }
+        if !self.column_regex_filter.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.column_regex_filter);
+        }
+        for value in &self.column_separators {
+            my_size += ::protobuf::rt::string_size(6, &value);
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.row_index_filters.is_empty() {
+            os.write_string(1, &self.row_index_filters)?;
+        }
+        if !self.row_regex_filter.is_empty() {
+            os.write_string(2, &self.row_regex_filter)?;
+        }
+        for v in &self.row_separators {
+            os.write_string(3, &v)?;
+        };
+        if !self.column_index_filters.is_empty() {
+            os.write_string(4, &self.column_index_filters)?;
+        }
+        if !self.column_regex_filter.is_empty() {
+            os.write_string(5, &self.column_regex_filter)?;
+        }
+        for v in &self.column_separators {
+            os.write_string(6, &v)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Initialize {
+        Initialize::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "row_index_filters",
+                |m: &Initialize| { &m.row_index_filters },
+                |m: &mut Initialize| { &mut m.row_index_filters },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "row_regex_filter",
+                |m: &Initialize| { &m.row_regex_filter },
+                |m: &mut Initialize| { &mut m.row_regex_filter },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "row_separators",
+                |m: &Initialize| { &m.row_separators },
+                |m: &mut Initialize| { &mut m.row_separators },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "column_index_filters",
+                |m: &Initialize| { &m.column_index_filters },
+                |m: &mut Initialize| { &mut m.column_index_filters },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "column_regex_filter",
+                |m: &Initialize| { &m.column_regex_filter },
+                |m: &mut Initialize| { &mut m.column_regex_filter },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "column_separators",
+                |m: &Initialize| { &m.column_separators },
+                |m: &mut Initialize| { &mut m.column_separators },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Initialize>(
+                "Initialize",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Initialize {
+        static instance: ::protobuf::rt::LazyV2<Initialize> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Initialize::new)
+    }
+}
+
+impl ::protobuf::Clear for Initialize {
+    fn clear(&mut self) {
+        self.row_index_filters.clear();
+        self.row_regex_filter.clear();
+        self.row_separators.clear();
+        self.column_index_filters.clear();
+        self.column_regex_filter.clear();
+        self.column_separators.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Initialize {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Initialize {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
@@ -1682,287 +1805,6 @@ impl ::protobuf::reflect::ProtobufValue for SetColumnSeparators {
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct RunCommand {
-    // message fields
-    pub command: ::std::string::String,
-    // special fields
-    #[cfg_attr(feature = "with-serde", serde(skip))]
-    pub unknown_fields: ::protobuf::UnknownFields,
-    #[cfg_attr(feature = "with-serde", serde(skip))]
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a RunCommand {
-    fn default() -> &'a RunCommand {
-        <RunCommand as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl RunCommand {
-    pub fn new() -> RunCommand {
-        ::std::default::Default::default()
-    }
-
-    // string command = 1;
-
-
-    pub fn get_command(&self) -> &str {
-        &self.command
-    }
-    pub fn clear_command(&mut self) {
-        self.command.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_command(&mut self, v: ::std::string::String) {
-        self.command = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_command(&mut self) -> &mut ::std::string::String {
-        &mut self.command
-    }
-
-    // Take field
-    pub fn take_command(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.command, ::std::string::String::new())
-    }
-}
-
-impl ::protobuf::Message for RunCommand {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.command)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.command.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.command);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.command.is_empty() {
-            os.write_string(1, &self.command)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> RunCommand {
-        RunCommand::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "command",
-                |m: &RunCommand| { &m.command },
-                |m: &mut RunCommand| { &mut m.command },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<RunCommand>(
-                "RunCommand",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static RunCommand {
-        static instance: ::protobuf::rt::LazyV2<RunCommand> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(RunCommand::new)
-    }
-}
-
-impl ::protobuf::Clear for RunCommand {
-    fn clear(&mut self) {
-        self.command.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for RunCommand {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for RunCommand {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct CancelCommand {
-    // special fields
-    #[cfg_attr(feature = "with-serde", serde(skip))]
-    pub unknown_fields: ::protobuf::UnknownFields,
-    #[cfg_attr(feature = "with-serde", serde(skip))]
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a CancelCommand {
-    fn default() -> &'a CancelCommand {
-        <CancelCommand as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl CancelCommand {
-    pub fn new() -> CancelCommand {
-        ::std::default::Default::default()
-    }
-}
-
-impl ::protobuf::Message for CancelCommand {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> CancelCommand {
-        CancelCommand::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let fields = ::std::vec::Vec::new();
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<CancelCommand>(
-                "CancelCommand",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static CancelCommand {
-        static instance: ::protobuf::rt::LazyV2<CancelCommand> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(CancelCommand::new)
-    }
-}
-
-impl ::protobuf::Clear for CancelCommand {
-    fn clear(&mut self) {
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for CancelCommand {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for CancelCommand {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct FromClient {
     // message oneof groups
     pub inner: ::std::option::Option<FromClient_oneof_inner>,
@@ -1982,14 +1824,13 @@ impl<'a> ::std::default::Default for &'a FromClient {
 #[derive(Clone,PartialEq,Debug)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum FromClient_oneof_inner {
+    initialize(Initialize),
     set_row_index_filters(SetRowIndexFilters),
     set_row_regex_filter(SetRowRegexFilter),
     set_row_separators(SetRowSeparators),
     set_column_index_filters(SetColumnIndexFilters),
     set_column_regex_filter(SetColumnRegexFilter),
     set_column_separators(SetColumnSeparators),
-    run_command(RunCommand),
-    cancel_command(CancelCommand),
 }
 
 impl FromClient {
@@ -1997,7 +1838,56 @@ impl FromClient {
         ::std::default::Default::default()
     }
 
-    // .SetRowIndexFilters set_row_index_filters = 1;
+    // .Initialize initialize = 1;
+
+
+    pub fn get_initialize(&self) -> &Initialize {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::initialize(ref v)) => v,
+            _ => <Initialize as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_initialize(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_initialize(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::initialize(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_initialize(&mut self, v: Initialize) {
+        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::initialize(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_initialize(&mut self) -> &mut Initialize {
+        if let ::std::option::Option::Some(FromClient_oneof_inner::initialize(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::initialize(Initialize::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::initialize(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_initialize(&mut self) -> Initialize {
+        if self.has_initialize() {
+            match self.inner.take() {
+                ::std::option::Option::Some(FromClient_oneof_inner::initialize(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            Initialize::new()
+        }
+    }
+
+    // .SetRowIndexFilters set_row_index_filters = 2;
 
 
     pub fn get_set_row_index_filters(&self) -> &SetRowIndexFilters {
@@ -2046,7 +1936,7 @@ impl FromClient {
         }
     }
 
-    // .SetRowRegexFilter set_row_regex_filter = 2;
+    // .SetRowRegexFilter set_row_regex_filter = 3;
 
 
     pub fn get_set_row_regex_filter(&self) -> &SetRowRegexFilter {
@@ -2095,7 +1985,7 @@ impl FromClient {
         }
     }
 
-    // .SetRowSeparators set_row_separators = 3;
+    // .SetRowSeparators set_row_separators = 4;
 
 
     pub fn get_set_row_separators(&self) -> &SetRowSeparators {
@@ -2144,7 +2034,7 @@ impl FromClient {
         }
     }
 
-    // .SetColumnIndexFilters set_column_index_filters = 4;
+    // .SetColumnIndexFilters set_column_index_filters = 5;
 
 
     pub fn get_set_column_index_filters(&self) -> &SetColumnIndexFilters {
@@ -2193,7 +2083,7 @@ impl FromClient {
         }
     }
 
-    // .SetColumnRegexFilter set_column_regex_filter = 5;
+    // .SetColumnRegexFilter set_column_regex_filter = 6;
 
 
     pub fn get_set_column_regex_filter(&self) -> &SetColumnRegexFilter {
@@ -2242,7 +2132,7 @@ impl FromClient {
         }
     }
 
-    // .SetColumnSeparators set_column_separators = 6;
+    // .SetColumnSeparators set_column_separators = 7;
 
 
     pub fn get_set_column_separators(&self) -> &SetColumnSeparators {
@@ -2290,108 +2180,15 @@ impl FromClient {
             SetColumnSeparators::new()
         }
     }
-
-    // .RunCommand run_command = 7;
-
-
-    pub fn get_run_command(&self) -> &RunCommand {
-        match self.inner {
-            ::std::option::Option::Some(FromClient_oneof_inner::run_command(ref v)) => v,
-            _ => <RunCommand as ::protobuf::Message>::default_instance(),
-        }
-    }
-    pub fn clear_run_command(&mut self) {
-        self.inner = ::std::option::Option::None;
-    }
-
-    pub fn has_run_command(&self) -> bool {
-        match self.inner {
-            ::std::option::Option::Some(FromClient_oneof_inner::run_command(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_run_command(&mut self, v: RunCommand) {
-        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::run_command(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_run_command(&mut self) -> &mut RunCommand {
-        if let ::std::option::Option::Some(FromClient_oneof_inner::run_command(_)) = self.inner {
-        } else {
-            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::run_command(RunCommand::new()));
-        }
-        match self.inner {
-            ::std::option::Option::Some(FromClient_oneof_inner::run_command(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_run_command(&mut self) -> RunCommand {
-        if self.has_run_command() {
-            match self.inner.take() {
-                ::std::option::Option::Some(FromClient_oneof_inner::run_command(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            RunCommand::new()
-        }
-    }
-
-    // .CancelCommand cancel_command = 8;
-
-
-    pub fn get_cancel_command(&self) -> &CancelCommand {
-        match self.inner {
-            ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(ref v)) => v,
-            _ => <CancelCommand as ::protobuf::Message>::default_instance(),
-        }
-    }
-    pub fn clear_cancel_command(&mut self) {
-        self.inner = ::std::option::Option::None;
-    }
-
-    pub fn has_cancel_command(&self) -> bool {
-        match self.inner {
-            ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(..)) => true,
-            _ => false,
-        }
-    }
-
-    // Param is passed by value, moved
-    pub fn set_cancel_command(&mut self, v: CancelCommand) {
-        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(v))
-    }
-
-    // Mutable pointer to the field.
-    pub fn mut_cancel_command(&mut self) -> &mut CancelCommand {
-        if let ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(_)) = self.inner {
-        } else {
-            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(CancelCommand::new()));
-        }
-        match self.inner {
-            ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(ref mut v)) => v,
-            _ => panic!(),
-        }
-    }
-
-    // Take field
-    pub fn take_cancel_command(&mut self) -> CancelCommand {
-        if self.has_cancel_command() {
-            match self.inner.take() {
-                ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(v)) => v,
-                _ => panic!(),
-            }
-        } else {
-            CancelCommand::new()
-        }
-    }
 }
 
 impl ::protobuf::Message for FromClient {
     fn is_initialized(&self) -> bool {
+        if let Some(FromClient_oneof_inner::initialize(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
         if let Some(FromClient_oneof_inner::set_row_index_filters(ref v)) = self.inner {
             if !v.is_initialized() {
                 return false;
@@ -2422,16 +2219,6 @@ impl ::protobuf::Message for FromClient {
                 return false;
             }
         }
-        if let Some(FromClient_oneof_inner::run_command(ref v)) = self.inner {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
-        if let Some(FromClient_oneof_inner::cancel_command(ref v)) = self.inner {
-            if !v.is_initialized() {
-                return false;
-            }
-        }
         true
     }
 
@@ -2443,49 +2230,43 @@ impl ::protobuf::Message for FromClient {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_index_filters(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::initialize(is.read_message()?));
                 },
                 2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_filter(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_index_filters(is.read_message()?));
                 },
                 3 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_separators(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_filter(is.read_message()?));
                 },
                 4 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_index_filters(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_separators(is.read_message()?));
                 },
                 5 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_filter(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_index_filters(is.read_message()?));
                 },
                 6 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_separators(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_filter(is.read_message()?));
                 },
                 7 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::run_command(is.read_message()?));
-                },
-                8 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::cancel_command(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_separators(is.read_message()?));
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -2501,6 +2282,10 @@ impl ::protobuf::Message for FromClient {
         let mut my_size = 0;
         if let ::std::option::Option::Some(ref v) = self.inner {
             match v {
+                &FromClient_oneof_inner::initialize(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
                 &FromClient_oneof_inner::set_row_index_filters(ref v) => {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
@@ -2522,14 +2307,6 @@ impl ::protobuf::Message for FromClient {
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
                 &FromClient_oneof_inner::set_column_separators(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &FromClient_oneof_inner::run_command(ref v) => {
-                    let len = v.compute_size();
-                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-                },
-                &FromClient_oneof_inner::cancel_command(ref v) => {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
@@ -2543,43 +2320,38 @@ impl ::protobuf::Message for FromClient {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if let ::std::option::Option::Some(ref v) = self.inner {
             match v {
-                &FromClient_oneof_inner::set_row_index_filters(ref v) => {
+                &FromClient_oneof_inner::initialize(ref v) => {
                     os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_row_regex_filter(ref v) => {
+                &FromClient_oneof_inner::set_row_index_filters(ref v) => {
                     os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_row_separators(ref v) => {
+                &FromClient_oneof_inner::set_row_regex_filter(ref v) => {
                     os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_column_index_filters(ref v) => {
+                &FromClient_oneof_inner::set_row_separators(ref v) => {
                     os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_column_regex_filter(ref v) => {
+                &FromClient_oneof_inner::set_column_index_filters(ref v) => {
                     os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_column_separators(ref v) => {
+                &FromClient_oneof_inner::set_column_regex_filter(ref v) => {
                     os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::run_command(ref v) => {
+                &FromClient_oneof_inner::set_column_separators(ref v) => {
                     os.write_tag(7, ::protobuf::wire_format::WireTypeLengthDelimited)?;
-                    os.write_raw_varint32(v.get_cached_size())?;
-                    v.write_to_with_cached_sizes(os)?;
-                },
-                &FromClient_oneof_inner::cancel_command(ref v) => {
-                    os.write_tag(8, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
@@ -2623,6 +2395,11 @@ impl ::protobuf::Message for FromClient {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, Initialize>(
+                "initialize",
+                FromClient::has_initialize,
+                FromClient::get_initialize,
+            ));
             fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetRowIndexFilters>(
                 "set_row_index_filters",
                 FromClient::has_set_row_index_filters,
@@ -2653,16 +2430,6 @@ impl ::protobuf::Message for FromClient {
                 FromClient::has_set_column_separators,
                 FromClient::get_set_column_separators,
             ));
-            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, RunCommand>(
-                "run_command",
-                FromClient::has_run_command,
-                FromClient::get_run_command,
-            ));
-            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, CancelCommand>(
-                "cancel_command",
-                FromClient::has_cancel_command,
-                FromClient::get_cancel_command,
-            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<FromClient>(
                 "FromClient",
                 fields,
@@ -2679,7 +2446,6 @@ impl ::protobuf::Message for FromClient {
 
 impl ::protobuf::Clear for FromClient {
     fn clear(&mut self) {
-        self.inner = ::std::option::Option::None;
         self.inner = ::std::option::Option::None;
         self.inner = ::std::option::Option::None;
         self.inner = ::std::option::Option::None;
@@ -2704,34 +2470,34 @@ impl ::protobuf::reflect::ProtobufValue for FromClient {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x11definitions.proto\"i\n\x10CompletedCommand\x12\x16\n\x06stdout\x18\
-    \x01\x20\x01(\x0cR\x06stdout\x12\x16\n\x06stderr\x18\x02\x20\x01(\x0cR\
-    \x06stderr\x12%\n\x0ewas_successful\x18\x03\x20\x01(\x08R\rwasSuccessful\
-    \"3\n\x0fUnexpectedError\x12\x20\n\x0bdescription\x18\x01\x20\x01(\tR\
-    \x0bdescription\"\x96\x01\n\nFromServer\x12@\n\x11completed_command\x18\
-    \x01\x20\x01(\x0b2\x11.CompletedCommandH\0R\x10completedCommand\x12=\n\
-    \x10unexpected_error\x18\x02\x20\x01(\x0b2\x10.UnexpectedErrorH\0R\x0fun\
-    expectedErrorB\x07\n\x05inner\".\n\x12SetRowIndexFilters\x12\x18\n\x07fi\
-    lters\x18\x01\x20\x01(\tR\x07filters\"+\n\x11SetRowRegexFilter\x12\x16\n\
-    \x06filter\x18\x01\x20\x01(\tR\x06filter\"2\n\x10SetRowSeparators\x12\
-    \x1e\n\nseparators\x18\x01\x20\x03(\tR\nseparators\"1\n\x15SetColumnInde\
-    xFilters\x12\x18\n\x07filters\x18\x01\x20\x01(\tR\x07filters\".\n\x14Set\
-    ColumnRegexFilter\x12\x16\n\x06filter\x18\x01\x20\x01(\tR\x06filter\"5\n\
-    \x13SetColumnSeparators\x12\x1e\n\nseparators\x18\x01\x20\x03(\tR\nsepar\
-    ators\"&\n\nRunCommand\x12\x18\n\x07command\x18\x01\x20\x01(\tR\x07comma\
-    nd\"\x0f\n\rCancelCommand\"\xc1\x04\n\nFromClient\x12H\n\x15set_row_inde\
-    x_filters\x18\x01\x20\x01(\x0b2\x13.SetRowIndexFiltersH\0R\x12setRowInde\
-    xFilters\x12E\n\x14set_row_regex_filter\x18\x02\x20\x01(\x0b2\x12.SetRow\
-    RegexFilterH\0R\x11setRowRegexFilter\x12A\n\x12set_row_separators\x18\
-    \x03\x20\x01(\x0b2\x11.SetRowSeparatorsH\0R\x10setRowSeparators\x12Q\n\
-    \x18set_column_index_filters\x18\x04\x20\x01(\x0b2\x16.SetColumnIndexFil\
-    tersH\0R\x15setColumnIndexFilters\x12N\n\x17set_column_regex_filter\x18\
-    \x05\x20\x01(\x0b2\x15.SetColumnRegexFilterH\0R\x14setColumnRegexFilter\
-    \x12J\n\x15set_column_separators\x18\x06\x20\x01(\x0b2\x14.SetColumnSepa\
-    ratorsH\0R\x13setColumnSeparators\x12.\n\x0brun_command\x18\x07\x20\x01(\
-    \x0b2\x0b.RunCommandH\0R\nrunCommand\x127\n\x0ecancel_command\x18\x08\
-    \x20\x01(\x0b2\x0e.CancelCommandH\0R\rcancelCommandB\x07\n\x05innerb\x06\
-    proto3\
+    \n\x11definitions.proto\"3\n\x0fUnexpectedError\x12\x20\n\x0bdescription\
+    \x18\x01\x20\x01(\tR\x0bdescription\"n\n\nFromServer\x12\x18\n\x06output\
+    \x18\x01\x20\x01(\x0cH\0R\x06output\x12=\n\x10unexpected_error\x18\x02\
+    \x20\x01(\x0b2\x10.UnexpectedErrorH\0R\x0funexpectedErrorB\x07\n\x05inne\
+    r\"\x98\x02\n\nInitialize\x12*\n\x11row_index_filters\x18\x01\x20\x01(\t\
+    R\x0frowIndexFilters\x12(\n\x10row_regex_filter\x18\x02\x20\x01(\tR\x0er\
+    owRegexFilter\x12%\n\x0erow_separators\x18\x03\x20\x03(\tR\rrowSeparator\
+    s\x120\n\x14column_index_filters\x18\x04\x20\x01(\tR\x12columnIndexFilte\
+    rs\x12.\n\x13column_regex_filter\x18\x05\x20\x01(\tR\x11columnRegexFilte\
+    r\x12+\n\x11column_separators\x18\x06\x20\x03(\tR\x10columnSeparators\".\
+    \n\x12SetRowIndexFilters\x12\x18\n\x07filters\x18\x01\x20\x01(\tR\x07fil\
+    ters\"+\n\x11SetRowRegexFilter\x12\x16\n\x06filter\x18\x01\x20\x01(\tR\
+    \x06filter\"2\n\x10SetRowSeparators\x12\x1e\n\nseparators\x18\x01\x20\
+    \x03(\tR\nseparators\"1\n\x15SetColumnIndexFilters\x12\x18\n\x07filters\
+    \x18\x01\x20\x01(\tR\x07filters\".\n\x14SetColumnRegexFilter\x12\x16\n\
+    \x06filter\x18\x01\x20\x01(\tR\x06filter\"5\n\x13SetColumnSeparators\x12\
+    \x1e\n\nseparators\x18\x01\x20\x03(\tR\nseparators\"\x87\x04\n\nFromClie\
+    nt\x12-\n\ninitialize\x18\x01\x20\x01(\x0b2\x0b.InitializeH\0R\ninitiali\
+    ze\x12H\n\x15set_row_index_filters\x18\x02\x20\x01(\x0b2\x13.SetRowIndex\
+    FiltersH\0R\x12setRowIndexFilters\x12E\n\x14set_row_regex_filter\x18\x03\
+    \x20\x01(\x0b2\x12.SetRowRegexFilterH\0R\x11setRowRegexFilter\x12A\n\x12\
+    set_row_separators\x18\x04\x20\x01(\x0b2\x11.SetRowSeparatorsH\0R\x10set\
+    RowSeparators\x12Q\n\x18set_column_index_filters\x18\x05\x20\x01(\x0b2\
+    \x16.SetColumnIndexFiltersH\0R\x15setColumnIndexFilters\x12N\n\x17set_co\
+    lumn_regex_filter\x18\x06\x20\x01(\x0b2\x15.SetColumnRegexFilterH\0R\x14\
+    setColumnRegexFilter\x12J\n\x15set_column_separators\x18\x07\x20\x01(\
+    \x0b2\x14.SetColumnSeparatorsH\0R\x13setColumnSeparatorsB\x07\n\x05inner\
+    b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

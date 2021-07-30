@@ -4,6 +4,7 @@ use csv;
 use regex::bytes::Regex;
 use std::io;
 
+#[derive(Debug)]
 pub struct Options {
     pub separators: Option<ByteTrie>,
     pub regex_filter: Option<Regex>,
@@ -83,6 +84,8 @@ fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
 }
 
 fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
+    dbg!(options.clone());
+    dbg!(data.clone());
     let mut result = match options.separators {
         None => vec![data.clone()],
         Some(ref separators) => split(separators, data),
@@ -110,10 +113,11 @@ pub fn transform_output(
         let mut writer = csv::WriterBuilder::new()
             .has_headers(false)
             .from_writer(&mut inner);
-        let rows: Vec<Vec<Vec<u8>>> = split_into_records(column_options, data)
+        let rows: Vec<Vec<Vec<u8>>> = split_into_records(row_options, data)
             .iter_mut()
-            .map(|row_data| split_into_records(row_options, row_data))
+            .map(|row_data| split_into_records(column_options, row_data))
             .collect();
+        dbg!(rows.clone());
         let mut longest_number_of_cells = 0;
 
         for row in &rows {
