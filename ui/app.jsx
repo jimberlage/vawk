@@ -5,30 +5,24 @@ import { Pivot, PivotItem, PrimaryButton, Stack, TextField, ThemeProvider } from
 import { FromClient, FromServer, Initialize, SetRowSeparators, SetRowIndexFilters, SetRowRegexFilter, SetColumnSeparators, SetColumnIndexFilters, SetColumnRegexFilter } from './definitions_pb.js';
 
 const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => {
-    const [separators, setSeparators] = React.useState(defaultSeparators || []);
-
     return (
         <Stack horizontal={false}>
-            {separators.map((separator, i) => (
+            {defaultSeparators.map((separator, i) => (
                 <Stack horizontal={true}>
                     <TextField
                         key={`${i}:${separator}`}
                         defaultValue={separator}
-                        onChange={(event) => {
-                            const newSeparators = [...separators];
+                        onBlur={(event) => {
+                            const newSeparators = [...defaultSeparators];
                             newSeparators[i] = event.target.value;
-                            setSeparators(newSeparators);
-                        }}
-                        onBlur={(_event) => {
-                            onChangeSeparators(separators);
+                            onChangeSeparators(newSeparators);
                         }}
                     />
                     <PrimaryButton
                         text='Delete'
                         onClick={(_event) => {
-                            var newSeparators = [...separators];
+                            var newSeparators = [...defaultSeparators];
                             newSeparators = newSeparators.slice(0, i).concat(newSeparators.slice(i, -1));
-                            setSeparators(newSeparators);
                             onChangeSeparators(newSeparators);
                         }}
                     />
@@ -37,9 +31,8 @@ const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => {
             <PrimaryButton
                 text='Add'
                 onClick={(_event) => {
-                    var newSeparators = [...separators];
+                    var newSeparators = [...defaultSeparators];
                     newSeparators.push('');
-                    setSeparators(newSeparators);
                     onChangeSeparators(newSeparators);
                 }}
             />
@@ -54,37 +47,26 @@ const Options = ({
     onChangeIndexFilters,
     defaultRegexFilter,
     onChangeRegexFilter,
-}) => {
-    const [indexFilters, setIndexFilters] = React.useState(defaultIndexFilters);
-    const [regexFilter, setRegexFilter] = React.useState(defaultRegexFilter);
-
-    return (
-        <Stack horizontal={false} style={{flex: 1}}>
-            <SeparatorsOptions
-                defaultSeparators={defaultSeparators}
-                onChangeSeparators={onChangeSeparators}
-            />
-            <TextField
-                defaultValue={indexFilters}
-                onChange={(event) => {
-                    setIndexFilters(event.target.value);
-                }}
-                onBlur={(_event) => {
-                    onChangeIndexFilters(indexFilters);
-                }}
-            />
-            <TextField
-                defaultValue={regexFilter}
-                onChange={(event) => {
-                    setRegexFilter(event.target.value);
-                }}
-                onBlur={(_event) => {
-                    onChangeRegexFilter(regexFilter);
-                }}
-            />
-        </Stack>
-    );
-}
+}) => (
+    <Stack horizontal={false} style={{flex: 1}}>
+        <SeparatorsOptions
+            defaultSeparators={defaultSeparators}
+            onChangeSeparators={onChangeSeparators}
+        />
+        <TextField
+            defaultValue={defaultIndexFilters}
+            onBlur={(event) => {
+                onChangeIndexFilters(event.target.value);
+            }}
+        />
+        <TextField
+            defaultValue={defaultRegexFilter}
+            onBlur={(event) => {
+                onChangeRegexFilter(event.target.value);
+            }}
+        />
+    </Stack>
+);
 
 const serializeSetRowSeparatorsMessage = (separators) => {
     const result = new FromClient();
@@ -114,19 +96,22 @@ const serializeSetRowRegexFilterMessage = (regexFilter) => {
     return result.serializeBinary().buffer;
 }
 
-const RowOptions = ({ connection, defaultSeparators, defaultIndexFilters, defaultRegexFilter }) => {
+const RowOptions = ({ connection, separators, setSeparators, indexFilters, setIndexFilters, regexFilter, setRegexFilter }) => {
     return (
         <Options
-            defaultSeparators={defaultSeparators}
+            defaultSeparators={separators}
             onChangeSeparators={(newSeparators) => {
+                setSeparators(newSeparators);
                 connection.send(serializeSetRowSeparatorsMessage(newSeparators));
             }}
-            defaultIndexFilters={defaultIndexFilters}
+            defaultIndexFilters={indexFilters}
             onChangeIndexFilters={(newIndexFilters) => {
+                setIndexFilters(newIndexFilters);
                 connection.send(serializeSetRowIndexFiltersMessage(newIndexFilters));
             }}
-            defaultRegexFilter={defaultRegexFilter}
+            defaultRegexFilter={regexFilter}
             onChangeRegexFilter={(newRegexFilter) => {
+                setRegexFilter(newRegexFilter);
                 connection.send(serializeSetRowRegexFilterMessage(newRegexFilter));
             }}
         />
@@ -161,19 +146,22 @@ const serializeSetColumnRegexFilterMessage = (regexFilter) => {
     return result.serializeBinary().buffer;
 }
 
-const ColumnOptions = ({ connection, defaultSeparators, defaultIndexFilters, defaultRegexFilter }) => {
+const ColumnOptions = ({ connection, separators, setSeparators, indexFilters, setIndexFilters, regexFilter, setRegexFilter }) => {
     return (
         <Options
-            defaultSeparators={defaultSeparators}
+            defaultSeparators={separators}
             onChangeSeparators={(newSeparators) => {
+                setSeparators(newSeparators);
                 connection.send(serializeSetColumnSeparatorsMessage(newSeparators));
             }}
-            defaultIndexFilters={defaultIndexFilters}
+            defaultIndexFilters={indexFilters}
             onChangeIndexFilters={(newIndexFilters) => {
+                setIndexFilters(newIndexFilters);
                 connection.send(serializeSetColumnIndexFiltersMessage(newIndexFilters));
             }}
-            defaultRegexFilter={defaultRegexFilter}
+            defaultRegexFilter={regexFilter}
             onChangeRegexFilter={(newRegexFilter) => {
+                setRegexFilter(newRegexFilter);
                 connection.send(serializeSetColumnRegexFilterMessage(newRegexFilter));
             }}
         />
@@ -188,28 +176,43 @@ const Sidebar = ({
     defaultColumnSeparators,
     defaultColumnIndexFilters,
     defaultColumnRegexFilter
-}) => (
-    <div style={{display: 'flex', flex: 1, minWidth: '256px'}}>
-        <Pivot>
-            <PivotItem headerText='Row'>
-                <RowOptions
-                    connection={connection}
-                    defaultSeparators={defaultRowSeparators}
-                    defaultIndexFilters={defaultRowIndexFilters}
-                    defaultRegexFilter={defaultRowRegexFilter}
-                />
-            </PivotItem>
-            <PivotItem headerText='Column'>
-                <ColumnOptions
-                    connection={connection}
-                    defaultSeparators={defaultColumnSeparators}
-                    defaultIndexFilters={defaultColumnIndexFilters}
-                    defaultRegexFilter={defaultColumnRegexFilter}
-                />
-            </PivotItem>
-        </Pivot>
-    </div>
-);
+}) => {
+    const [rowSeparators, setRowSeparators] = React.useState(defaultRowSeparators);
+    const [rowIndexFilters, setRowIndexFilters] = React.useState(defaultRowIndexFilters);
+    const [rowRegexFilter, setRowRegexFilter] = React.useState(defaultRowRegexFilter);
+    const [columnSeparators, setColumnSeparators] = React.useState(defaultColumnSeparators);
+    const [columnIndexFilters, setColumnIndexFilters] = React.useState(defaultColumnIndexFilters);
+    const [columnRegexFilter, setColumnRegexFilter] = React.useState(defaultColumnRegexFilter);
+
+    return (
+        <div style={{display: 'flex', flex: 1, minWidth: '256px'}}>
+            <Pivot>
+                <PivotItem headerText='Row'>
+                    <RowOptions
+                        connection={connection}
+                        separators={rowSeparators}
+                        setSeparators={setRowSeparators}
+                        indexFilters={rowIndexFilters}
+                        setIndexFilters={setRowIndexFilters}
+                        regexFilter={rowRegexFilter}
+                        setRegexFilter={setRowRegexFilter}
+                    />
+                </PivotItem>
+                <PivotItem headerText='Column'>
+                    <ColumnOptions
+                        connection={connection}
+                        separators={columnSeparators}
+                        setSeparators={setColumnSeparators}
+                        indexFilters={columnIndexFilters}
+                        setIndexFilters={setColumnIndexFilters}
+                        regexFilter={columnRegexFilter}
+                        setRegexFilter={setColumnRegexFilter}
+                    />
+                </PivotItem>
+            </Pivot>
+        </div>
+    );
+}
 
 const Table = ({ rows }) => (
     <table>

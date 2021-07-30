@@ -9,6 +9,7 @@ use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::web;
 use actix_web_actors::ws;
+use clap::{App, Arg};
 use env_logger;
 use std::io::{self, Read};
 use std::process::Command;
@@ -73,25 +74,32 @@ async fn index_js_map(context: web::Data<Context>) -> impl actix_web::Responder 
         .body(context.bundled_js_map.clone())
 }
 
-async fn run_server(stdin: Vec<u8>, socket_address: &str) -> io::Result<()> {
+async fn run_server(
+    stdin: Vec<u8>,
+    socket_address: &str,
+    in_development_mode: bool,
+) -> io::Result<()> {
     let html = include_str!("../ui/index.html");
     let js = include_str!("../ui/out.js");
     let js_map = include_str!("../ui/out.js.map");
 
     let server = actix_web::HttpServer::new(move || {
-        actix_web::App::new()
+        let mut app = actix_web::App::new()
             .data(Context {
                 bundled_html: html.to_owned(),
                 bundled_js: js.to_owned(),
                 bundled_js_map: js_map.to_owned(),
                 stdin: stdin.clone(),
             })
-            .service(web::resource("/ws/").route(web::get().to(connect)))
-            .service(index)
-            .service(index_js)
-            .service(index_js_map)
-            .wrap(Logger::default())
-            .wrap(Cors::permissive())
+            .service(web::resource("/ws/").route(web::get().to(connect)));
+
+        app = if in_development_mode {
+            app.service(actix_files::Files::new("/", "./ui/").index_file("index.html"))
+        } else {
+            app.service(index).service(index_js).service(index_js_map)
+        };
+
+        app.wrap(Logger::default()).wrap(Cors::permissive())
     })
     .bind(socket_address)?
     .run();
@@ -111,6 +119,22 @@ async fn run_server(stdin: Vec<u8>, socket_address: &str) -> io::Result<()> {
 async fn main() {
     env_logger::init();
 
+    let matches = App::new("VAWK (Visual AWK)")
+        .version("1.0")
+        .author("Jim Berlage <jamesberlage@gmail.com>")
+        .about("Allows users to view process output as a spreadsheet.")
+        .arg(
+            Arg::with_name("development-mode")
+                .long("development-mode")
+                .help(
+                    "Allows the user to run the frontend using esbuild for more rapid development.",
+                )
+                .takes_value(false)
+                .required(false),
+        )
+        .get_matches();
+    let in_development_mode = matches.is_present("development-mode");
+
     let mut stdin = vec![];
     if let Err(error) = io::stdin().read_to_end(&mut stdin) {
         log::error!("Failed to read command input:\n{}", error);
@@ -120,7 +144,7 @@ async fn main() {
     let port = 6846;
     let socket_address = format!("127.0.0.1:{}", port);
 
-    if let Err(error) = run_server(stdin, &socket_address).await {
+    if let Err(error) = run_server(stdin, &socket_address, in_development_mode).await {
         log::error!("Failed to start server:\n{}", error);
     }
 }

@@ -12,6 +12,7 @@ protoc-rust = "2"
 [dependencies]
 actix = "0.10"
 actix-cors = "0.5"
+actix-files = "0.5"
 actix-http = "2"
 actix-rt = "2"
 actix-web = "3"

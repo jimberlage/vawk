@@ -84,8 +84,6 @@ fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
 }
 
 fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
-    dbg!(options.clone());
-    dbg!(data.clone());
     let mut result = match options.separators {
         None => vec![data.clone()],
         Some(ref separators) => split(separators, data),
@@ -117,7 +115,6 @@ pub fn transform_output(
             .iter_mut()
             .map(|row_data| split_into_records(column_options, row_data))
             .collect();
-        dbg!(rows.clone());
         let mut longest_number_of_cells = 0;
 
         for row in &rows {

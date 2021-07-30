@@ -94,9 +94,9 @@ impl fmt::Display for SendCSVError {
 }
 
 /// How often heartbeat pings are sent.
-pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+pub const HEARTBEAT_INTERVAL: Duration = Duration::from_millis(100);
 /// How long before lack of client response causes a timeout.
-pub const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+pub const CLIENT_TIMEOUT: Duration = Duration::from_millis(500);
 
 pub struct WebsocketConnection {
     stdin: Vec<u8>,
@@ -145,12 +145,9 @@ impl WebsocketConnection {
         &mut self,
         ctx: &mut ws::WebsocketContext<WebsocketConnection>,
     ) -> Result<(), SendCSVError> {
-        dbg!(String::from_utf8(self.stdin.clone()));
         let transformed =
             transformers::transform_output(&self.column_options, &self.row_options, &self.stdin)
                 .map_err(|error| SendCSVError::TransformError(error))?;
-
-        dbg!(transformed.clone());
 
         let mut output_response = FromServer::default();
         output_response.inner = Some(FromServerInner::output(transformed));
@@ -168,26 +165,34 @@ impl WebsocketConnection {
             parsers::parse_field_separators(initial_values.get_row_separators())
                 .map_err(|error| InitializeError::InvalidRowFieldSeparatorError(error))?,
         );
-        self.row_options.index_filters = Some(
-            parsers::parse_index_filters(initial_values.get_row_index_filters())
-                .map_err(|error| InitializeError::InvalidRowIndexFiltersError(error))?,
-        );
-        self.row_options.regex_filter = Some(
-            parsers::parse_regex_filter(initial_values.get_row_regex_filter())
-                .map_err(|error| InitializeError::InvalidRowRegexFilterError(error))?,
-        );
+        if initial_values.get_row_index_filters() != "" {
+            self.row_options.index_filters = Some(
+                parsers::parse_index_filters(initial_values.get_row_index_filters())
+                    .map_err(|error| InitializeError::InvalidRowIndexFiltersError(error))?,
+            );
+        }
+        if initial_values.get_row_regex_filter() != "" {
+            self.row_options.regex_filter = Some(
+                parsers::parse_regex_filter(initial_values.get_row_regex_filter())
+                    .map_err(|error| InitializeError::InvalidRowRegexFilterError(error))?,
+            );
+        }
         self.column_options.separators = Some(
             parsers::parse_field_separators(initial_values.get_column_separators())
                 .map_err(|error| InitializeError::InvalidColumnFieldSeparatorError(error))?,
         );
-        self.column_options.index_filters = Some(
-            parsers::parse_index_filters(initial_values.get_column_index_filters())
-                .map_err(|error| InitializeError::InvalidColumnIndexFiltersError(error))?,
-        );
-        self.column_options.regex_filter = Some(
-            parsers::parse_regex_filter(initial_values.get_column_regex_filter())
-                .map_err(|error| InitializeError::InvalidColumnRegexFilterError(error))?,
-        );
+        if initial_values.get_column_index_filters() != "" {
+            self.column_options.index_filters = Some(
+                parsers::parse_index_filters(initial_values.get_column_index_filters())
+                    .map_err(|error| InitializeError::InvalidColumnIndexFiltersError(error))?,
+            );
+        }
+        if initial_values.get_column_regex_filter() != "" {
+            self.column_options.regex_filter = Some(
+                parsers::parse_regex_filter(initial_values.get_column_regex_filter())
+                    .map_err(|error| InitializeError::InvalidColumnRegexFilterError(error))?,
+            );
+        }
 
         Ok(())
     }
@@ -196,6 +201,11 @@ impl WebsocketConnection {
         &mut self,
         filters: SetColumnIndexFilters,
     ) -> Result<(), parsers::InvalidIndexFiltersError> {
+        if filters.get_filters() == "" {
+            self.column_options.index_filters = None;
+            return Ok(());
+        }
+
         match parsers::parse_index_filters(filters.get_filters()) {
             Ok(parsed_filters) => {
                 self.column_options.index_filters = Some(parsed_filters);
@@ -212,6 +222,11 @@ impl WebsocketConnection {
         &mut self,
         filter: SetColumnRegexFilter,
     ) -> Result<(), parsers::InvalidRegexFilterError> {
+        if filter.get_filter() == "" {
+            self.column_options.regex_filter = None;
+            return Ok(());
+        }
+
         match parsers::parse_regex_filter(filter.get_filter()) {
             Ok(parsed_filter) => {
                 self.column_options.regex_filter = Some(parsed_filter);
@@ -244,6 +259,11 @@ impl WebsocketConnection {
         &mut self,
         filters: SetRowIndexFilters,
     ) -> Result<(), parsers::InvalidIndexFiltersError> {
+        if filters.get_filters() == "" {
+            self.row_options.index_filters = None;
+            return Ok(());
+        }
+
         match parsers::parse_index_filters(filters.get_filters()) {
             Ok(parsed_filters) => {
                 self.row_options.index_filters = Some(parsed_filters);
@@ -260,6 +280,11 @@ impl WebsocketConnection {
         &mut self,
         filter: SetRowRegexFilter,
     ) -> Result<(), parsers::InvalidRegexFilterError> {
+        if filter.get_filter() == "" {
+            self.row_options.regex_filter = None;
+            return Ok(());
+        }
+
         match parsers::parse_regex_filter(filter.get_filter()) {
             Ok(parsed_filter) => {
                 self.row_options.regex_filter = Some(parsed_filter);
@@ -290,83 +315,81 @@ impl WebsocketConnection {
 
     fn handle_message(&mut self, ctx: &mut ws::WebsocketContext<WebsocketConnection>, data: Bytes) {
         match FromClient::parse_from_bytes(&data.to_vec()) {
-            Ok(message) => {
-                match message.inner {
-                    Some(FromClientInner::initialize(initial_values)) => {
-                        match self.initialize(initial_values) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
+            Ok(message) => match message.inner {
+                Some(FromClientInner::initialize(initial_values)) => {
+                    match self.initialize(initial_values) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
                             }
                         }
-                    }
-                    Some(FromClientInner::set_column_index_filters(set_column_index_filters)) => {
-                        match self.set_column_index_filters(set_column_index_filters) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
-                            }
-                        }
-                    }
-                    Some(FromClientInner::set_column_regex_filter(set_column_regex_filter)) => {
-                        match self.set_column_regex_filter(set_column_regex_filter) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
-                            }
-                        }
-                    }
-                    Some(FromClientInner::set_column_separators(set_column_separators)) => {
-                        match self.set_column_separators(set_column_separators) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
-                            }
-                        }
-                    }
-                    Some(FromClientInner::set_row_index_filters(set_row_index_filters)) => {
-                        match self.set_row_index_filters(set_row_index_filters) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
-                            }
-                        }
-                    }
-                    Some(FromClientInner::set_row_regex_filter(set_row_regex_filter)) => {
-                        match self.set_row_regex_filter(set_row_regex_filter) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
-                            }
-                        }
-                    }
-                    Some(FromClientInner::set_row_separators(set_row_separators)) => {
-                        match self.set_row_separators(set_row_separators) {
-                            Err(error) => self.send_error(ctx, error),
-                            Ok(()) => {
-                                if let Err(error) = self.send_csvs(ctx) {
-                                    self.send_error(ctx, error);
-                                }
-                            }
-                        }
-                    }
-                    None => {
-                        self.send_error(ctx, EmptyMessageError);
                     }
                 }
-            }
+                Some(FromClientInner::set_column_index_filters(set_column_index_filters)) => {
+                    match self.set_column_index_filters(set_column_index_filters) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_column_regex_filter(set_column_regex_filter)) => {
+                    match self.set_column_regex_filter(set_column_regex_filter) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_column_separators(set_column_separators)) => {
+                    match self.set_column_separators(set_column_separators) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_row_index_filters(set_row_index_filters)) => {
+                    match self.set_row_index_filters(set_row_index_filters) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_row_regex_filter(set_row_regex_filter)) => {
+                    match self.set_row_regex_filter(set_row_regex_filter) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_row_separators(set_row_separators)) => {
+                    match self.set_row_separators(set_row_separators) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                None => {
+                    self.send_error(ctx, EmptyMessageError);
+                }
+            },
             Err(error) => {
                 self.send_error(ctx, MessageParseError(error));
             }
@@ -421,6 +444,7 @@ impl Actor for WebsocketConnection {
             // Have we timed out?  If so, close this connection.
             if Instant::now().duration_since(connection.last_seen_heartbeat) > CLIENT_TIMEOUT {
                 ctx.stop();
+                System::current().stop();
                 return;
             }
 
@@ -464,6 +488,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
+                System::current().stop();
             }
             Err(error) => {
                 log::error!("{}", error);
