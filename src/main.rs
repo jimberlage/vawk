@@ -32,6 +32,7 @@ fn open_gui(socket_address: &str) -> io::Result<()> {
 
 struct Context {
     bundled_html: String,
+    bundled_css: String,
     bundled_js: String,
     bundled_js_map: String,
     stdin: Vec<u8>,
@@ -60,6 +61,13 @@ async fn index(context: web::Data<Context>) -> impl actix_web::Responder {
         .body(context.bundled_html.clone())
 }
 
+#[actix_web::get("/out.css")]
+async fn index_css(context: web::Data<Context>) -> impl actix_web::Responder {
+    actix_web::HttpResponse::Ok()
+        .content_type("text/css")
+        .body(context.bundled_css.clone())
+}
+
 #[actix_web::get("/out.js")]
 async fn index_js(context: web::Data<Context>) -> impl actix_web::Responder {
     actix_web::HttpResponse::Ok()
@@ -80,6 +88,7 @@ async fn run_server(
     in_development_mode: bool,
 ) -> io::Result<()> {
     let html = include_str!("../ui/index.html");
+    let css = include_str!("../ui/out.css");
     let js = include_str!("../ui/out.js");
     let js_map = include_str!("../ui/out.js.map");
 
@@ -87,6 +96,7 @@ async fn run_server(
         let mut app = actix_web::App::new()
             .data(Context {
                 bundled_html: html.to_owned(),
+                bundled_css: css.to_owned(),
                 bundled_js: js.to_owned(),
                 bundled_js_map: js_map.to_owned(),
                 stdin: stdin.clone(),
@@ -96,7 +106,7 @@ async fn run_server(
         app = if in_development_mode {
             app.service(actix_files::Files::new("/", "./ui/").index_file("index.html"))
         } else {
-            app.service(index).service(index_js).service(index_js_map)
+            app.service(index).service(index_css).service(index_js).service(index_js_map)
         };
 
         app.wrap(Logger::default()).wrap(Cors::permissive())

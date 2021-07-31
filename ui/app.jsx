@@ -6,25 +6,36 @@ import "./app.css";
 
 const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
   <div className='flex flex-col'>
+    <label class='label'>
+      <span class='label-text'>
+        Add one or more separators to split on
+      </span>
+    </label>
     {defaultSeparators.map((separator, i) => (
-      <div key={`${i}:${separator}`} className='flex flex-row'>
-        <input
-          defaultValue={separator}
-          onBlur={(event) => {
-            const newSeparators = [...defaultSeparators];
-            newSeparators[i] = event.target.value;
-            onChangeSeparators(newSeparators);
-          }}
-        />
+      <div key={`${i}:${separator}`} className='flex flex-row items-center'>
+        <div className='form-control'>
+          <input
+            className='input input-bordered'
+            type='text'
+            defaultValue={separator}
+            onBlur={(event) => {
+              const newSeparators = [...defaultSeparators];
+              newSeparators[i] = event.target.value;
+              onChangeSeparators(newSeparators);
+            }}
+          />
+        </div>
         <button
-          className='btn'
+          className='btn btn-circle btn-xs flex justify-center items-center'
           onClick={(_event) => {
             var newSeparators = [...defaultSeparators];
             newSeparators = newSeparators.slice(0, i).concat(newSeparators.slice(i, -1));
             onChangeSeparators(newSeparators);
           }}
         >
-          Delete
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
         </button>
       </div>
     ))}
@@ -54,20 +65,36 @@ const Options = ({
       defaultSeparators={defaultSeparators}
       onChangeSeparators={onChangeSeparators}
     />
-    <input
-      type='text'
-      defaultValue={defaultIndexFilters}
-      onBlur={(event) => {
-        onChangeIndexFilters(event.target.value);
-      }}
-    />
-    <input
-      type='text'
-      defaultValue={defaultRegexFilter}
-      onBlur={(event) => {
-        onChangeRegexFilter(event.target.value);
-      }}
-    />
+    <div className='form-control'>
+      <label class='label'>
+        <span class='label-text'>
+          Add indices to keep here, like "3" or "0..9" or "5.."
+        </span>
+      </label>
+      <input
+        className='input input-bordered'
+        type='text'
+        defaultValue={defaultIndexFilters}
+        onBlur={(event) => {
+          onChangeIndexFilters(event.target.value);
+        }}
+      />
+    </div>
+    <div className='form-control'>
+      <label class='label'>
+        <span class='label-text'>
+          Add a regex that lines should match, like "\.gitignore"
+        </span>
+      </label>
+      <input
+        className='input input-bordered'
+        type='text'
+        defaultValue={defaultRegexFilter}
+        onBlur={(event) => {
+          onChangeRegexFilter(event.target.value);
+        }}
+      />
+    </div>
   </div>
 );
 
@@ -180,6 +207,7 @@ const Sidebar = ({
   defaultColumnIndexFilters,
   defaultColumnRegexFilter
 }) => {
+  const [tab, setTab] = React.useState('row');
   const [rowSeparators, setRowSeparators] = React.useState(defaultRowSeparators);
   const [rowIndexFilters, setRowIndexFilters] = React.useState(defaultRowIndexFilters);
   const [rowRegexFilter, setRowRegexFilter] = React.useState(defaultRowRegexFilter);
@@ -188,47 +216,89 @@ const Sidebar = ({
   const [columnRegexFilter, setColumnRegexFilter] = React.useState(defaultColumnRegexFilter);
 
   return (
-    <div className='flex flex-col flex-1'>
-      <div className='tabs'>
-        <a className='tab tab-bordered'>Row</a>
-        <a className='tab tab-bordered'>Column</a>
-        <RowOptions
-          connection={connection}
-          separators={rowSeparators}
-          setSeparators={setRowSeparators}
-          indexFilters={rowIndexFilters}
-          setIndexFilters={setRowIndexFilters}
-          regexFilter={rowRegexFilter}
-          setRegexFilter={setRowRegexFilter}
-        />
-        <ColumnOptions
-          connection={connection}
-          separators={columnSeparators}
-          setSeparators={setColumnSeparators}
-          indexFilters={columnIndexFilters}
-          setIndexFilters={setColumnIndexFilters}
-          regexFilter={columnRegexFilter}
-          setRegexFilter={setColumnRegexFilter}
-        />
+    <div className='w-1/6'>
+      <div className='card text-center shadow-2xl flex h-screen-8 w-1/6 fixed top-4 right-4 bg-white'>
+        <div className='tabs w-full'>
+          <a
+            className={`tab tab-bordered ${tab === 'row' ? 'tab-active' : ''} flex-1`}
+            onClick={(_event) => setTab('row')}
+          >
+            Row
+          </a>
+          <a
+            className={`tab tab-bordered ${tab === 'column' ? 'tab-active' : ''} flex-1`}
+            onClick={(_event) => setTab('column')}
+          >
+            Column
+          </a>
+        </div>
+        <div className='px-2'>
+          {tab === 'row' ? (
+            <RowOptions
+              connection={connection}
+              separators={rowSeparators}
+              setSeparators={setRowSeparators}
+              indexFilters={rowIndexFilters}
+              setIndexFilters={setRowIndexFilters}
+              regexFilter={rowRegexFilter}
+              setRegexFilter={setRowRegexFilter}
+            />
+          ) : (
+            <ColumnOptions
+              connection={connection}
+              separators={columnSeparators}
+              setSeparators={setColumnSeparators}
+              indexFilters={columnIndexFilters}
+              setIndexFilters={setColumnIndexFilters}
+              regexFilter={columnRegexFilter}
+              setRegexFilter={setColumnRegexFilter}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-const Table = ({ rows }) => (
-  <table className='table table-compact font-mono'>
-    <tbody>
-      {rows.map((row, i) => (
-        <tr className='border-2 border-gray-600 border-solid' key={`${row.join()}:${i}`}>
-          {row.map((cell, j) => (
-            <td className='border-2 border-gray-600 border-solid' key={`${cell}:${j}`} style={{whiteSpace: 'pre'}}>
-              {cell}
-            </td>
-          ))}
-        </tr>
+const TableRow = ({ row }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  return (
+    <tr
+      className={isHovered ? 'active' : ''}
+      onMouseEnter={(_event) => setIsHovered(true)}
+      onMouseLeave={(_event) => setIsHovered(false)}
+    >
+      {row.map((cell, i) => (
+        <td key={`${cell}:${i}`}>
+          {cell}
+        </td>
       ))}
-    </tbody>
-  </table>
+    </tr>
+  );
+}
+
+const Table = ({ rows }) => (
+  <div className='flex flex-1 p-4'>
+    {rows ? (
+      <table className='table table-compact font-mono overflow-y-auto'>
+        {rows.length > 0 ? (
+          <thead>
+            <tr>
+              {rows[0].map((_, i) => (
+                <th key={i}>{i}</th>
+              ))}
+            </tr>
+          </thead>
+        ) : null}
+        <tbody>
+          {rows.map((row, i) => (
+            <TableRow key={`${row.join()}:${i}`} row={row} />
+          ))}
+        </tbody>
+      </table>
+    ) : null}
+  </div>
 );
 
 const bytesDecoder = new TextDecoder();
@@ -277,7 +347,7 @@ const App = () => {
   const defaultColumnIndexFilters = '';
   const defaultColumnRegexFilter = '';
   const [connection, setConnection] = React.useState();
-  const [rows, setRows] = React.useState([]);
+  const [rows, setRows] = React.useState();
 
   // Set up the connection.
   React.useEffect(() => {
@@ -305,6 +375,7 @@ const App = () => {
   return (
     <div className='flex flex-row flex-1'>
       <Table rows={rows} />
+      <div className='flex w-8' />
       <Sidebar
         connection={connection}
         defaultRowSeparators={defaultRowSeparators}
