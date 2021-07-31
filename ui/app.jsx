@@ -4,6 +4,26 @@ import * as ReactDOM from 'react-dom';
 import { FromClient, FromServer, Initialize, SetRowSeparators, SetRowIndexFilters, SetRowRegexFilter, SetColumnSeparators, SetColumnIndexFilters, SetColumnRegexFilter } from './definitions_pb.js';
 import "./app.css";
 
+const BlurredInput = (props) => {
+  const inputRef = React.useRef(null);
+
+  return (
+    <input
+      onKeyPress={(event) => {
+        if (props.onKeyPress) {
+          props.onKeyPress(event);
+        }
+
+        if (event.key === 'Enter') {
+          inputRef.current.blur();
+        }
+      }}
+      ref={inputRef}
+      {...props}
+    />
+  )
+}
+
 const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
   <div className='flex flex-col'>
     <label class='label'>
@@ -12,9 +32,9 @@ const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
       </span>
     </label>
     {defaultSeparators.map((separator, i) => (
-      <div key={`${i}:${separator}`} className='flex flex-row items-center'>
-        <div className='form-control'>
-          <input
+      <div key={`${i}:${separator}`} className='flex flex-row items-center pb-4'>
+        <div className='form-control flex-1'>
+          <BlurredInput
             className='input input-bordered'
             type='text'
             defaultValue={separator}
@@ -26,7 +46,7 @@ const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
           />
         </div>
         <button
-          className='btn btn-circle btn-xs flex justify-center items-center'
+          className='btn btn-circle btn-xs flex justify-center items-center ml-2'
           onClick={(_event) => {
             var newSeparators = [...defaultSeparators];
             newSeparators = newSeparators.slice(0, i).concat(newSeparators.slice(i, -1));
@@ -47,7 +67,7 @@ const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
         onChangeSeparators(newSeparators);
       }}
     >
-      Add
+      Add separator
     </button>
   </div>
 );
@@ -71,7 +91,7 @@ const Options = ({
           Add indices to keep here, like "3" or "0..9" or "5.."
         </span>
       </label>
-      <input
+      <BlurredInput
         className='input input-bordered'
         type='text'
         defaultValue={defaultIndexFilters}
@@ -86,7 +106,7 @@ const Options = ({
           Add a regex that lines should match, like "\.gitignore"
         </span>
       </label>
-      <input
+      <BlurredInput
         className='input input-bordered'
         type='text'
         defaultValue={defaultRegexFilter}
@@ -207,6 +227,7 @@ const Sidebar = ({
   defaultColumnIndexFilters,
   defaultColumnRegexFilter
 }) => {
+  const [isHidden, setIsHidden] = React.useState(false);
   const [tab, setTab] = React.useState('row');
   const [rowSeparators, setRowSeparators] = React.useState(defaultRowSeparators);
   const [rowIndexFilters, setRowIndexFilters] = React.useState(defaultRowIndexFilters);
@@ -215,46 +236,61 @@ const Sidebar = ({
   const [columnIndexFilters, setColumnIndexFilters] = React.useState(defaultColumnIndexFilters);
   const [columnRegexFilter, setColumnRegexFilter] = React.useState(defaultColumnRegexFilter);
 
+  if (isHidden) {
+    return (
+      <button
+        className='fixed top-4 right-4 btn btn-accent rounded-2xl opacity-60'
+        onClick={(_event) => setIsHidden(false)}
+      >
+        Show controls
+      </button>
+    )
+  }
+
   return (
-    <div className='w-1/6'>
-      <div className='card text-center shadow-2xl flex h-screen-8 w-1/6 fixed top-4 right-4 bg-white'>
-        <div className='tabs w-full'>
-          <a
-            className={`tab tab-bordered ${tab === 'row' ? 'tab-active' : ''} flex-1`}
-            onClick={(_event) => setTab('row')}
-          >
-            Row
-          </a>
-          <a
-            className={`tab tab-bordered ${tab === 'column' ? 'tab-active' : ''} flex-1`}
-            onClick={(_event) => setTab('column')}
-          >
-            Column
-          </a>
-        </div>
-        <div className='px-2'>
-          {tab === 'row' ? (
-            <RowOptions
-              connection={connection}
-              separators={rowSeparators}
-              setSeparators={setRowSeparators}
-              indexFilters={rowIndexFilters}
-              setIndexFilters={setRowIndexFilters}
-              regexFilter={rowRegexFilter}
-              setRegexFilter={setRowRegexFilter}
-            />
-          ) : (
-            <ColumnOptions
-              connection={connection}
-              separators={columnSeparators}
-              setSeparators={setColumnSeparators}
-              indexFilters={columnIndexFilters}
-              setIndexFilters={setColumnIndexFilters}
-              regexFilter={columnRegexFilter}
-              setRegexFilter={setColumnRegexFilter}
-            />
-          )}
-        </div>
+    <div className='card text-center shadow-2xl flex h-screen-8 w-1/6 fixed top-4 right-4 bg-white'>
+      <button
+        className='btn btn-accent rounded-2xl mb-4'
+        onClick={(_event) => setIsHidden(true)}
+      >
+        Hide
+      </button>
+      <div className='tabs w-full mb-4'>
+        <a
+          className={`tab tab-bordered ${tab === 'row' ? 'tab-active' : ''} flex-1`}
+          onClick={(_event) => setTab('row')}
+        >
+          Row
+        </a>
+        <a
+          className={`tab tab-bordered ${tab === 'column' ? 'tab-active' : ''} flex-1`}
+          onClick={(_event) => setTab('column')}
+        >
+          Column
+        </a>
+      </div>
+      <div className='px-2'>
+        {tab === 'row' ? (
+          <RowOptions
+            connection={connection}
+            separators={rowSeparators}
+            setSeparators={setRowSeparators}
+            indexFilters={rowIndexFilters}
+            setIndexFilters={setRowIndexFilters}
+            regexFilter={rowRegexFilter}
+            setRegexFilter={setRowRegexFilter}
+          />
+        ) : (
+          <ColumnOptions
+            connection={connection}
+            separators={columnSeparators}
+            setSeparators={setColumnSeparators}
+            indexFilters={columnIndexFilters}
+            setIndexFilters={setColumnIndexFilters}
+            regexFilter={columnRegexFilter}
+            setRegexFilter={setColumnRegexFilter}
+          />
+        )}
       </div>
     </div>
   );
