@@ -126,20 +126,15 @@ fn install_javascript_dependencies() -> io::Result<()> {
 }
 
 fn build_javascript() -> io::Result<()> {
-    let status = process::Command::new("npx")
-        .arg("esbuild")
-        .arg("ui/app.jsx")
-        .arg("--bundle")
-        .arg("--minify")
-        .arg("--sourcemap")
-        .arg("--target=es2017")
-        .arg("--outfile=ui/out.js")
+    let status = process::Command::new("node")
+        .arg("build.js")
+        .current_dir("ui")
         .status()?;
 
     if !status.success() {
         return Err(io::Error::new(
             io::ErrorKind::Other,
-            "Got a nonzero exit code running \"npm install\"",
+            "Got a nonzero exit code running \"node build.js\"",
         ));
     }
 

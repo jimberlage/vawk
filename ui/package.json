@@ -1,18 +1,22 @@
 {
-    "name": "@jimberlage/shble",
-    "version": "1.0.0",
-    "devDependencies": {
-        "esbuild": "^0.12.15"
-    },
-    "dependencies": {
-        "@fluentui/react": "^8.23.0",
-        "google-protobuf": "^3.17.3",
-        "papaparse": "^5.3.1",
-        "react": "^17.0.2",
-        "react-dom": "^17.0.2"
-    },
-    "scripts": {
-        "build": "esbuild app.jsx --bundle --minify --sourcemap --target=es2017 --outfile=out.js",
-        "watch": "esbuild app.jsx --bundle --minify --sourcemap --target=es2017 --outfile=out.js --watch"
-    }
+  "name": "@jimberlage/vawk",
+  "version": "1.0.0",
+  "devDependencies": {
+    "autoprefixer": "^10.3.1",
+    "esbuild": "^0.12.15",
+    "esbuild-plugin-postcss2": "0.0.9",
+    "postcss": "^8.3.6",
+    "tailwindcss": "^2.2.7"
+  },
+  "dependencies": {
+    "daisyui": "^1.10.0",
+    "google-protobuf": "^3.17.3",
+    "papaparse": "^5.3.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "scripts": {
+    "build": "node ./build.js",
+    "watch": "esbuild app.jsx --bundle --minify --sourcemap --target=es2017 --outfile=out.js --watch"
+  }
 }
