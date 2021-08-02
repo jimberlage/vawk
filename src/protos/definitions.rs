@@ -465,14 +465,542 @@ impl ::protobuf::reflect::ProtobufValue for FromServer {
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct And {
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a And {
+    fn default() -> &'a And {
+        <And as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl And {
+    pub fn new() -> And {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for And {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> And {
+        And::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<And>(
+                "And",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static And {
+        static instance: ::protobuf::rt::LazyV2<And> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(And::new)
+    }
+}
+
+impl ::protobuf::Clear for And {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for And {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for And {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct Or {
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Or {
+    fn default() -> &'a Or {
+        <Or as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Or {
+    pub fn new() -> Or {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for Or {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Or {
+        Or::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let fields = ::std::vec::Vec::new();
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Or>(
+                "Or",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Or {
+        static instance: ::protobuf::rt::LazyV2<Or> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Or::new)
+    }
+}
+
+impl ::protobuf::Clear for Or {
+    fn clear(&mut self) {
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Or {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Or {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct Combination {
+    // message oneof groups
+    pub inner: ::std::option::Option<Combination_oneof_inner>,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Combination {
+    fn default() -> &'a Combination {
+        <Combination as ::protobuf::Message>::default_instance()
+    }
+}
+
+#[derive(Clone,PartialEq,Debug)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum Combination_oneof_inner {
+    and(And),
+    or(Or),
+}
+
+impl Combination {
+    pub fn new() -> Combination {
+        ::std::default::Default::default()
+    }
+
+    // .And and = 1;
+
+
+    pub fn get_and(&self) -> &And {
+        match self.inner {
+            ::std::option::Option::Some(Combination_oneof_inner::and(ref v)) => v,
+            _ => <And as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_and(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_and(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(Combination_oneof_inner::and(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_and(&mut self, v: And) {
+        self.inner = ::std::option::Option::Some(Combination_oneof_inner::and(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_and(&mut self) -> &mut And {
+        if let ::std::option::Option::Some(Combination_oneof_inner::and(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(Combination_oneof_inner::and(And::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(Combination_oneof_inner::and(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_and(&mut self) -> And {
+        if self.has_and() {
+            match self.inner.take() {
+                ::std::option::Option::Some(Combination_oneof_inner::and(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            And::new()
+        }
+    }
+
+    // .Or or = 2;
+
+
+    pub fn get_or(&self) -> &Or {
+        match self.inner {
+            ::std::option::Option::Some(Combination_oneof_inner::or(ref v)) => v,
+            _ => <Or as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_or(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_or(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(Combination_oneof_inner::or(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_or(&mut self, v: Or) {
+        self.inner = ::std::option::Option::Some(Combination_oneof_inner::or(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_or(&mut self) -> &mut Or {
+        if let ::std::option::Option::Some(Combination_oneof_inner::or(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(Combination_oneof_inner::or(Or::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(Combination_oneof_inner::or(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_or(&mut self) -> Or {
+        if self.has_or() {
+            match self.inner.take() {
+                ::std::option::Option::Some(Combination_oneof_inner::or(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            Or::new()
+        }
+    }
+}
+
+impl ::protobuf::Message for Combination {
+    fn is_initialized(&self) -> bool {
+        if let Some(Combination_oneof_inner::and(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(Combination_oneof_inner::or(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.inner = ::std::option::Option::Some(Combination_oneof_inner::and(is.read_message()?));
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.inner = ::std::option::Option::Some(Combination_oneof_inner::or(is.read_message()?));
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let ::std::option::Option::Some(ref v) = self.inner {
+            match v {
+                &Combination_oneof_inner::and(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+                &Combination_oneof_inner::or(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+            };
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let ::std::option::Option::Some(ref v) = self.inner {
+            match v {
+                &Combination_oneof_inner::and(ref v) => {
+                    os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &Combination_oneof_inner::or(ref v) => {
+                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+            };
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Combination {
+        Combination::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, And>(
+                "and",
+                Combination::has_and,
+                Combination::get_and,
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, Or>(
+                "or",
+                Combination::has_or,
+                Combination::get_or,
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Combination>(
+                "Combination",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Combination {
+        static instance: ::protobuf::rt::LazyV2<Combination> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Combination::new)
+    }
+}
+
+impl ::protobuf::Clear for Combination {
+    fn clear(&mut self) {
+        self.inner = ::std::option::Option::None;
+        self.inner = ::std::option::Option::None;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Combination {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Combination {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Initialize {
     // message fields
     pub row_index_filters: ::std::string::String,
     pub row_regex_filter: ::std::string::String,
+    pub row_filter_combination: ::protobuf::SingularPtrField<Combination>,
     pub row_separators: ::protobuf::RepeatedField<::std::string::String>,
+    pub row_regex_separator: ::std::string::String,
     pub column_index_filters: ::std::string::String,
     pub column_regex_filter: ::std::string::String,
+    pub column_filter_combination: ::protobuf::SingularPtrField<Combination>,
     pub column_separators: ::protobuf::RepeatedField<::std::string::String>,
+    pub column_regex_separator: ::std::string::String,
     // special fields
     #[cfg_attr(feature = "with-serde", serde(skip))]
     pub unknown_fields: ::protobuf::UnknownFields,
@@ -543,7 +1071,40 @@ impl Initialize {
         ::std::mem::replace(&mut self.row_regex_filter, ::std::string::String::new())
     }
 
-    // repeated string row_separators = 3;
+    // .Combination row_filter_combination = 3;
+
+
+    pub fn get_row_filter_combination(&self) -> &Combination {
+        self.row_filter_combination.as_ref().unwrap_or_else(|| <Combination as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_row_filter_combination(&mut self) {
+        self.row_filter_combination.clear();
+    }
+
+    pub fn has_row_filter_combination(&self) -> bool {
+        self.row_filter_combination.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_row_filter_combination(&mut self, v: Combination) {
+        self.row_filter_combination = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_row_filter_combination(&mut self) -> &mut Combination {
+        if self.row_filter_combination.is_none() {
+            self.row_filter_combination.set_default();
+        }
+        self.row_filter_combination.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_row_filter_combination(&mut self) -> Combination {
+        self.row_filter_combination.take().unwrap_or_else(|| Combination::new())
+    }
+
+    // repeated string row_separators = 4;
 
 
     pub fn get_row_separators(&self) -> &[::std::string::String] {
@@ -568,7 +1129,33 @@ impl Initialize {
         ::std::mem::replace(&mut self.row_separators, ::protobuf::RepeatedField::new())
     }
 
-    // string column_index_filters = 4;
+    // string row_regex_separator = 5;
+
+
+    pub fn get_row_regex_separator(&self) -> &str {
+        &self.row_regex_separator
+    }
+    pub fn clear_row_regex_separator(&mut self) {
+        self.row_regex_separator.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_row_regex_separator(&mut self, v: ::std::string::String) {
+        self.row_regex_separator = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_row_regex_separator(&mut self) -> &mut ::std::string::String {
+        &mut self.row_regex_separator
+    }
+
+    // Take field
+    pub fn take_row_regex_separator(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.row_regex_separator, ::std::string::String::new())
+    }
+
+    // string column_index_filters = 6;
 
 
     pub fn get_column_index_filters(&self) -> &str {
@@ -594,7 +1181,7 @@ impl Initialize {
         ::std::mem::replace(&mut self.column_index_filters, ::std::string::String::new())
     }
 
-    // string column_regex_filter = 5;
+    // string column_regex_filter = 7;
 
 
     pub fn get_column_regex_filter(&self) -> &str {
@@ -620,7 +1207,40 @@ impl Initialize {
         ::std::mem::replace(&mut self.column_regex_filter, ::std::string::String::new())
     }
 
-    // repeated string column_separators = 6;
+    // .Combination column_filter_combination = 8;
+
+
+    pub fn get_column_filter_combination(&self) -> &Combination {
+        self.column_filter_combination.as_ref().unwrap_or_else(|| <Combination as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_column_filter_combination(&mut self) {
+        self.column_filter_combination.clear();
+    }
+
+    pub fn has_column_filter_combination(&self) -> bool {
+        self.column_filter_combination.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_column_filter_combination(&mut self, v: Combination) {
+        self.column_filter_combination = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_column_filter_combination(&mut self) -> &mut Combination {
+        if self.column_filter_combination.is_none() {
+            self.column_filter_combination.set_default();
+        }
+        self.column_filter_combination.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_column_filter_combination(&mut self) -> Combination {
+        self.column_filter_combination.take().unwrap_or_else(|| Combination::new())
+    }
+
+    // repeated string column_separators = 9;
 
 
     pub fn get_column_separators(&self) -> &[::std::string::String] {
@@ -644,10 +1264,46 @@ impl Initialize {
     pub fn take_column_separators(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
         ::std::mem::replace(&mut self.column_separators, ::protobuf::RepeatedField::new())
     }
+
+    // string column_regex_separator = 10;
+
+
+    pub fn get_column_regex_separator(&self) -> &str {
+        &self.column_regex_separator
+    }
+    pub fn clear_column_regex_separator(&mut self) {
+        self.column_regex_separator.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_column_regex_separator(&mut self, v: ::std::string::String) {
+        self.column_regex_separator = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_column_regex_separator(&mut self) -> &mut ::std::string::String {
+        &mut self.column_regex_separator
+    }
+
+    // Take field
+    pub fn take_column_regex_separator(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.column_regex_separator, ::std::string::String::new())
+    }
 }
 
 impl ::protobuf::Message for Initialize {
     fn is_initialized(&self) -> bool {
+        for v in &self.row_filter_combination {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.column_filter_combination {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
         true
     }
 
@@ -662,16 +1318,28 @@ impl ::protobuf::Message for Initialize {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.row_regex_filter)?;
                 },
                 3 => {
-                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.row_separators)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.row_filter_combination)?;
                 },
                 4 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_index_filters)?;
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.row_separators)?;
                 },
                 5 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_regex_filter)?;
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.row_regex_separator)?;
                 },
                 6 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_index_filters)?;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_regex_filter)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.column_filter_combination)?;
+                },
+                9 => {
                     ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.column_separators)?;
+                },
+                10 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.column_regex_separator)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -691,18 +1359,32 @@ impl ::protobuf::Message for Initialize {
         if !self.row_regex_filter.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.row_regex_filter);
         }
+        if let Some(ref v) = self.row_filter_combination.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
         for value in &self.row_separators {
-            my_size += ::protobuf::rt::string_size(3, &value);
+            my_size += ::protobuf::rt::string_size(4, &value);
         };
+        if !self.row_regex_separator.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.row_regex_separator);
+        }
         if !self.column_index_filters.is_empty() {
-            my_size += ::protobuf::rt::string_size(4, &self.column_index_filters);
+            my_size += ::protobuf::rt::string_size(6, &self.column_index_filters);
         }
         if !self.column_regex_filter.is_empty() {
-            my_size += ::protobuf::rt::string_size(5, &self.column_regex_filter);
+            my_size += ::protobuf::rt::string_size(7, &self.column_regex_filter);
+        }
+        if let Some(ref v) = self.column_filter_combination.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
         for value in &self.column_separators {
-            my_size += ::protobuf::rt::string_size(6, &value);
+            my_size += ::protobuf::rt::string_size(9, &value);
         };
+        if !self.column_regex_separator.is_empty() {
+            my_size += ::protobuf::rt::string_size(10, &self.column_regex_separator);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -715,18 +1397,34 @@ impl ::protobuf::Message for Initialize {
         if !self.row_regex_filter.is_empty() {
             os.write_string(2, &self.row_regex_filter)?;
         }
+        if let Some(ref v) = self.row_filter_combination.as_ref() {
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
         for v in &self.row_separators {
-            os.write_string(3, &v)?;
+            os.write_string(4, &v)?;
         };
+        if !self.row_regex_separator.is_empty() {
+            os.write_string(5, &self.row_regex_separator)?;
+        }
         if !self.column_index_filters.is_empty() {
-            os.write_string(4, &self.column_index_filters)?;
+            os.write_string(6, &self.column_index_filters)?;
         }
         if !self.column_regex_filter.is_empty() {
-            os.write_string(5, &self.column_regex_filter)?;
+            os.write_string(7, &self.column_regex_filter)?;
+        }
+        if let Some(ref v) = self.column_filter_combination.as_ref() {
+            os.write_tag(8, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
         for v in &self.column_separators {
-            os.write_string(6, &v)?;
+            os.write_string(9, &v)?;
         };
+        if !self.column_regex_separator.is_empty() {
+            os.write_string(10, &self.column_regex_separator)?;
+        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -775,10 +1473,20 @@ impl ::protobuf::Message for Initialize {
                 |m: &Initialize| { &m.row_regex_filter },
                 |m: &mut Initialize| { &mut m.row_regex_filter },
             ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Combination>>(
+                "row_filter_combination",
+                |m: &Initialize| { &m.row_filter_combination },
+                |m: &mut Initialize| { &mut m.row_filter_combination },
+            ));
             fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "row_separators",
                 |m: &Initialize| { &m.row_separators },
                 |m: &mut Initialize| { &mut m.row_separators },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "row_regex_separator",
+                |m: &Initialize| { &m.row_regex_separator },
+                |m: &mut Initialize| { &mut m.row_regex_separator },
             ));
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "column_index_filters",
@@ -790,10 +1498,20 @@ impl ::protobuf::Message for Initialize {
                 |m: &Initialize| { &m.column_regex_filter },
                 |m: &mut Initialize| { &mut m.column_regex_filter },
             ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Combination>>(
+                "column_filter_combination",
+                |m: &Initialize| { &m.column_filter_combination },
+                |m: &mut Initialize| { &mut m.column_filter_combination },
+            ));
             fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "column_separators",
                 |m: &Initialize| { &m.column_separators },
                 |m: &mut Initialize| { &mut m.column_separators },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "column_regex_separator",
+                |m: &Initialize| { &m.column_regex_separator },
+                |m: &mut Initialize| { &mut m.column_regex_separator },
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<Initialize>(
                 "Initialize",
@@ -813,10 +1531,14 @@ impl ::protobuf::Clear for Initialize {
     fn clear(&mut self) {
         self.row_index_filters.clear();
         self.row_regex_filter.clear();
+        self.row_filter_combination.clear();
         self.row_separators.clear();
+        self.row_regex_separator.clear();
         self.column_index_filters.clear();
         self.column_regex_filter.clear();
+        self.column_filter_combination.clear();
         self.column_separators.clear();
+        self.column_regex_separator.clear();
         self.unknown_fields.clear();
     }
 }
@@ -1159,6 +1881,183 @@ impl ::protobuf::reflect::ProtobufValue for SetRowRegexFilter {
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct SetRowFilterCombination {
+    // message fields
+    pub combination: ::protobuf::SingularPtrField<Combination>,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a SetRowFilterCombination {
+    fn default() -> &'a SetRowFilterCombination {
+        <SetRowFilterCombination as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl SetRowFilterCombination {
+    pub fn new() -> SetRowFilterCombination {
+        ::std::default::Default::default()
+    }
+
+    // .Combination combination = 1;
+
+
+    pub fn get_combination(&self) -> &Combination {
+        self.combination.as_ref().unwrap_or_else(|| <Combination as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_combination(&mut self) {
+        self.combination.clear();
+    }
+
+    pub fn has_combination(&self) -> bool {
+        self.combination.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_combination(&mut self, v: Combination) {
+        self.combination = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_combination(&mut self) -> &mut Combination {
+        if self.combination.is_none() {
+            self.combination.set_default();
+        }
+        self.combination.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_combination(&mut self) -> Combination {
+        self.combination.take().unwrap_or_else(|| Combination::new())
+    }
+}
+
+impl ::protobuf::Message for SetRowFilterCombination {
+    fn is_initialized(&self) -> bool {
+        for v in &self.combination {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.combination)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let Some(ref v) = self.combination.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let Some(ref v) = self.combination.as_ref() {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> SetRowFilterCombination {
+        SetRowFilterCombination::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Combination>>(
+                "combination",
+                |m: &SetRowFilterCombination| { &m.combination },
+                |m: &mut SetRowFilterCombination| { &mut m.combination },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<SetRowFilterCombination>(
+                "SetRowFilterCombination",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static SetRowFilterCombination {
+        static instance: ::protobuf::rt::LazyV2<SetRowFilterCombination> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(SetRowFilterCombination::new)
+    }
+}
+
+impl ::protobuf::Clear for SetRowFilterCombination {
+    fn clear(&mut self) {
+        self.combination.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for SetRowFilterCombination {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for SetRowFilterCombination {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct SetRowSeparators {
     // message fields
     pub separators: ::protobuf::RepeatedField<::std::string::String>,
@@ -1313,6 +2212,168 @@ impl ::std::fmt::Debug for SetRowSeparators {
 }
 
 impl ::protobuf::reflect::ProtobufValue for SetRowSeparators {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct SetRowRegexSeparator {
+    // message fields
+    pub separator: ::std::string::String,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a SetRowRegexSeparator {
+    fn default() -> &'a SetRowRegexSeparator {
+        <SetRowRegexSeparator as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl SetRowRegexSeparator {
+    pub fn new() -> SetRowRegexSeparator {
+        ::std::default::Default::default()
+    }
+
+    // string separator = 1;
+
+
+    pub fn get_separator(&self) -> &str {
+        &self.separator
+    }
+    pub fn clear_separator(&mut self) {
+        self.separator.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_separator(&mut self, v: ::std::string::String) {
+        self.separator = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_separator(&mut self) -> &mut ::std::string::String {
+        &mut self.separator
+    }
+
+    // Take field
+    pub fn take_separator(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.separator, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for SetRowRegexSeparator {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.separator)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.separator.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.separator);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.separator.is_empty() {
+            os.write_string(1, &self.separator)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> SetRowRegexSeparator {
+        SetRowRegexSeparator::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "separator",
+                |m: &SetRowRegexSeparator| { &m.separator },
+                |m: &mut SetRowRegexSeparator| { &mut m.separator },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<SetRowRegexSeparator>(
+                "SetRowRegexSeparator",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static SetRowRegexSeparator {
+        static instance: ::protobuf::rt::LazyV2<SetRowRegexSeparator> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(SetRowRegexSeparator::new)
+    }
+}
+
+impl ::protobuf::Clear for SetRowRegexSeparator {
+    fn clear(&mut self) {
+        self.separator.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for SetRowRegexSeparator {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for SetRowRegexSeparator {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
@@ -1644,6 +2705,183 @@ impl ::protobuf::reflect::ProtobufValue for SetColumnRegexFilter {
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct SetColumnFilterCombination {
+    // message fields
+    pub combination: ::protobuf::SingularPtrField<Combination>,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a SetColumnFilterCombination {
+    fn default() -> &'a SetColumnFilterCombination {
+        <SetColumnFilterCombination as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl SetColumnFilterCombination {
+    pub fn new() -> SetColumnFilterCombination {
+        ::std::default::Default::default()
+    }
+
+    // .Combination combination = 1;
+
+
+    pub fn get_combination(&self) -> &Combination {
+        self.combination.as_ref().unwrap_or_else(|| <Combination as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_combination(&mut self) {
+        self.combination.clear();
+    }
+
+    pub fn has_combination(&self) -> bool {
+        self.combination.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_combination(&mut self, v: Combination) {
+        self.combination = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_combination(&mut self) -> &mut Combination {
+        if self.combination.is_none() {
+            self.combination.set_default();
+        }
+        self.combination.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_combination(&mut self) -> Combination {
+        self.combination.take().unwrap_or_else(|| Combination::new())
+    }
+}
+
+impl ::protobuf::Message for SetColumnFilterCombination {
+    fn is_initialized(&self) -> bool {
+        for v in &self.combination {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.combination)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if let Some(ref v) = self.combination.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if let Some(ref v) = self.combination.as_ref() {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> SetColumnFilterCombination {
+        SetColumnFilterCombination::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Combination>>(
+                "combination",
+                |m: &SetColumnFilterCombination| { &m.combination },
+                |m: &mut SetColumnFilterCombination| { &mut m.combination },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<SetColumnFilterCombination>(
+                "SetColumnFilterCombination",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static SetColumnFilterCombination {
+        static instance: ::protobuf::rt::LazyV2<SetColumnFilterCombination> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(SetColumnFilterCombination::new)
+    }
+}
+
+impl ::protobuf::Clear for SetColumnFilterCombination {
+    fn clear(&mut self) {
+        self.combination.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for SetColumnFilterCombination {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for SetColumnFilterCombination {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct SetColumnSeparators {
     // message fields
     pub separators: ::protobuf::RepeatedField<::std::string::String>,
@@ -1805,6 +3043,168 @@ impl ::protobuf::reflect::ProtobufValue for SetColumnSeparators {
 
 #[derive(PartialEq,Clone,Default)]
 #[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct SetColumnRegexSeparator {
+    // message fields
+    pub separator: ::std::string::String,
+    // special fields
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub unknown_fields: ::protobuf::UnknownFields,
+    #[cfg_attr(feature = "with-serde", serde(skip))]
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a SetColumnRegexSeparator {
+    fn default() -> &'a SetColumnRegexSeparator {
+        <SetColumnRegexSeparator as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl SetColumnRegexSeparator {
+    pub fn new() -> SetColumnRegexSeparator {
+        ::std::default::Default::default()
+    }
+
+    // string separator = 1;
+
+
+    pub fn get_separator(&self) -> &str {
+        &self.separator
+    }
+    pub fn clear_separator(&mut self) {
+        self.separator.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_separator(&mut self, v: ::std::string::String) {
+        self.separator = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_separator(&mut self) -> &mut ::std::string::String {
+        &mut self.separator
+    }
+
+    // Take field
+    pub fn take_separator(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.separator, ::std::string::String::new())
+    }
+}
+
+impl ::protobuf::Message for SetColumnRegexSeparator {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.separator)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.separator.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.separator);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.separator.is_empty() {
+            os.write_string(1, &self.separator)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> SetColumnRegexSeparator {
+        SetColumnRegexSeparator::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "separator",
+                |m: &SetColumnRegexSeparator| { &m.separator },
+                |m: &mut SetColumnRegexSeparator| { &mut m.separator },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<SetColumnRegexSeparator>(
+                "SetColumnRegexSeparator",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static SetColumnRegexSeparator {
+        static instance: ::protobuf::rt::LazyV2<SetColumnRegexSeparator> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(SetColumnRegexSeparator::new)
+    }
+}
+
+impl ::protobuf::Clear for SetColumnRegexSeparator {
+    fn clear(&mut self) {
+        self.separator.clear();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for SetColumnRegexSeparator {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for SetColumnRegexSeparator {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+#[cfg_attr(feature = "with-serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct FromClient {
     // message oneof groups
     pub inner: ::std::option::Option<FromClient_oneof_inner>,
@@ -1827,10 +3227,14 @@ pub enum FromClient_oneof_inner {
     initialize(Initialize),
     set_row_index_filters(SetRowIndexFilters),
     set_row_regex_filter(SetRowRegexFilter),
+    set_row_filter_combination(SetRowFilterCombination),
     set_row_separators(SetRowSeparators),
+    set_row_regex_separator(SetRowRegexSeparator),
     set_column_index_filters(SetColumnIndexFilters),
     set_column_regex_filter(SetColumnRegexFilter),
+    set_column_filter_combination(SetColumnFilterCombination),
     set_column_separators(SetColumnSeparators),
+    set_column_regex_separator(SetColumnRegexSeparator),
 }
 
 impl FromClient {
@@ -1985,7 +3389,56 @@ impl FromClient {
         }
     }
 
-    // .SetRowSeparators set_row_separators = 4;
+    // .SetRowFilterCombination set_row_filter_combination = 4;
+
+
+    pub fn get_set_row_filter_combination(&self) -> &SetRowFilterCombination {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(ref v)) => v,
+            _ => <SetRowFilterCombination as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_set_row_filter_combination(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_set_row_filter_combination(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_set_row_filter_combination(&mut self, v: SetRowFilterCombination) {
+        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_set_row_filter_combination(&mut self) -> &mut SetRowFilterCombination {
+        if let ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(SetRowFilterCombination::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_set_row_filter_combination(&mut self) -> SetRowFilterCombination {
+        if self.has_set_row_filter_combination() {
+            match self.inner.take() {
+                ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            SetRowFilterCombination::new()
+        }
+    }
+
+    // .SetRowSeparators set_row_separators = 5;
 
 
     pub fn get_set_row_separators(&self) -> &SetRowSeparators {
@@ -2034,7 +3487,56 @@ impl FromClient {
         }
     }
 
-    // .SetColumnIndexFilters set_column_index_filters = 5;
+    // .SetRowRegexSeparator set_row_regex_separator = 6;
+
+
+    pub fn get_set_row_regex_separator(&self) -> &SetRowRegexSeparator {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(ref v)) => v,
+            _ => <SetRowRegexSeparator as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_set_row_regex_separator(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_set_row_regex_separator(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_set_row_regex_separator(&mut self, v: SetRowRegexSeparator) {
+        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_set_row_regex_separator(&mut self) -> &mut SetRowRegexSeparator {
+        if let ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(SetRowRegexSeparator::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_set_row_regex_separator(&mut self) -> SetRowRegexSeparator {
+        if self.has_set_row_regex_separator() {
+            match self.inner.take() {
+                ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            SetRowRegexSeparator::new()
+        }
+    }
+
+    // .SetColumnIndexFilters set_column_index_filters = 7;
 
 
     pub fn get_set_column_index_filters(&self) -> &SetColumnIndexFilters {
@@ -2083,7 +3585,7 @@ impl FromClient {
         }
     }
 
-    // .SetColumnRegexFilter set_column_regex_filter = 6;
+    // .SetColumnRegexFilter set_column_regex_filter = 8;
 
 
     pub fn get_set_column_regex_filter(&self) -> &SetColumnRegexFilter {
@@ -2132,7 +3634,56 @@ impl FromClient {
         }
     }
 
-    // .SetColumnSeparators set_column_separators = 7;
+    // .SetColumnFilterCombination set_column_filter_combination = 9;
+
+
+    pub fn get_set_column_filter_combination(&self) -> &SetColumnFilterCombination {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(ref v)) => v,
+            _ => <SetColumnFilterCombination as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_set_column_filter_combination(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_set_column_filter_combination(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_set_column_filter_combination(&mut self, v: SetColumnFilterCombination) {
+        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_set_column_filter_combination(&mut self) -> &mut SetColumnFilterCombination {
+        if let ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(SetColumnFilterCombination::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_set_column_filter_combination(&mut self) -> SetColumnFilterCombination {
+        if self.has_set_column_filter_combination() {
+            match self.inner.take() {
+                ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            SetColumnFilterCombination::new()
+        }
+    }
+
+    // .SetColumnSeparators set_column_separators = 10;
 
 
     pub fn get_set_column_separators(&self) -> &SetColumnSeparators {
@@ -2180,6 +3731,55 @@ impl FromClient {
             SetColumnSeparators::new()
         }
     }
+
+    // .SetColumnRegexSeparator set_column_regex_separator = 11;
+
+
+    pub fn get_set_column_regex_separator(&self) -> &SetColumnRegexSeparator {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(ref v)) => v,
+            _ => <SetColumnRegexSeparator as ::protobuf::Message>::default_instance(),
+        }
+    }
+    pub fn clear_set_column_regex_separator(&mut self) {
+        self.inner = ::std::option::Option::None;
+    }
+
+    pub fn has_set_column_regex_separator(&self) -> bool {
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(..)) => true,
+            _ => false,
+        }
+    }
+
+    // Param is passed by value, moved
+    pub fn set_set_column_regex_separator(&mut self, v: SetColumnRegexSeparator) {
+        self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(v))
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_set_column_regex_separator(&mut self) -> &mut SetColumnRegexSeparator {
+        if let ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(_)) = self.inner {
+        } else {
+            self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(SetColumnRegexSeparator::new()));
+        }
+        match self.inner {
+            ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(ref mut v)) => v,
+            _ => panic!(),
+        }
+    }
+
+    // Take field
+    pub fn take_set_column_regex_separator(&mut self) -> SetColumnRegexSeparator {
+        if self.has_set_column_regex_separator() {
+            match self.inner.take() {
+                ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(v)) => v,
+                _ => panic!(),
+            }
+        } else {
+            SetColumnRegexSeparator::new()
+        }
+    }
 }
 
 impl ::protobuf::Message for FromClient {
@@ -2199,7 +3799,17 @@ impl ::protobuf::Message for FromClient {
                 return false;
             }
         }
+        if let Some(FromClient_oneof_inner::set_row_filter_combination(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
         if let Some(FromClient_oneof_inner::set_row_separators(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(FromClient_oneof_inner::set_row_regex_separator(ref v)) = self.inner {
             if !v.is_initialized() {
                 return false;
             }
@@ -2214,7 +3824,17 @@ impl ::protobuf::Message for FromClient {
                 return false;
             }
         }
+        if let Some(FromClient_oneof_inner::set_column_filter_combination(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
         if let Some(FromClient_oneof_inner::set_column_separators(ref v)) = self.inner {
+            if !v.is_initialized() {
+                return false;
+            }
+        }
+        if let Some(FromClient_oneof_inner::set_column_regex_separator(ref v)) = self.inner {
             if !v.is_initialized() {
                 return false;
             }
@@ -2248,25 +3868,49 @@ impl ::protobuf::Message for FromClient {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_separators(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_filter_combination(is.read_message()?));
                 },
                 5 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_index_filters(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_separators(is.read_message()?));
                 },
                 6 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_filter(is.read_message()?));
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_row_regex_separator(is.read_message()?));
                 },
                 7 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_index_filters(is.read_message()?));
+                },
+                8 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_filter(is.read_message()?));
+                },
+                9 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_filter_combination(is.read_message()?));
+                },
+                10 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
                     self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_separators(is.read_message()?));
+                },
+                11 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    self.inner = ::std::option::Option::Some(FromClient_oneof_inner::set_column_regex_separator(is.read_message()?));
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -2294,7 +3938,15 @@ impl ::protobuf::Message for FromClient {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
+                &FromClient_oneof_inner::set_row_filter_combination(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
                 &FromClient_oneof_inner::set_row_separators(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+                &FromClient_oneof_inner::set_row_regex_separator(ref v) => {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
@@ -2306,7 +3958,15 @@ impl ::protobuf::Message for FromClient {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
+                &FromClient_oneof_inner::set_column_filter_combination(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
                 &FromClient_oneof_inner::set_column_separators(ref v) => {
+                    let len = v.compute_size();
+                    my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+                },
+                &FromClient_oneof_inner::set_column_regex_separator(ref v) => {
                     let len = v.compute_size();
                     my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
                 },
@@ -2335,23 +3995,43 @@ impl ::protobuf::Message for FromClient {
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_row_separators(ref v) => {
+                &FromClient_oneof_inner::set_row_filter_combination(ref v) => {
                     os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_column_index_filters(ref v) => {
+                &FromClient_oneof_inner::set_row_separators(ref v) => {
                     os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_column_regex_filter(ref v) => {
+                &FromClient_oneof_inner::set_row_regex_separator(ref v) => {
                     os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
-                &FromClient_oneof_inner::set_column_separators(ref v) => {
+                &FromClient_oneof_inner::set_column_index_filters(ref v) => {
                     os.write_tag(7, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &FromClient_oneof_inner::set_column_regex_filter(ref v) => {
+                    os.write_tag(8, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &FromClient_oneof_inner::set_column_filter_combination(ref v) => {
+                    os.write_tag(9, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &FromClient_oneof_inner::set_column_separators(ref v) => {
+                    os.write_tag(10, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
+                },
+                &FromClient_oneof_inner::set_column_regex_separator(ref v) => {
+                    os.write_tag(11, ::protobuf::wire_format::WireTypeLengthDelimited)?;
                     os.write_raw_varint32(v.get_cached_size())?;
                     v.write_to_with_cached_sizes(os)?;
                 },
@@ -2410,10 +4090,20 @@ impl ::protobuf::Message for FromClient {
                 FromClient::has_set_row_regex_filter,
                 FromClient::get_set_row_regex_filter,
             ));
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetRowFilterCombination>(
+                "set_row_filter_combination",
+                FromClient::has_set_row_filter_combination,
+                FromClient::get_set_row_filter_combination,
+            ));
             fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetRowSeparators>(
                 "set_row_separators",
                 FromClient::has_set_row_separators,
                 FromClient::get_set_row_separators,
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetRowRegexSeparator>(
+                "set_row_regex_separator",
+                FromClient::has_set_row_regex_separator,
+                FromClient::get_set_row_regex_separator,
             ));
             fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetColumnIndexFilters>(
                 "set_column_index_filters",
@@ -2425,10 +4115,20 @@ impl ::protobuf::Message for FromClient {
                 FromClient::has_set_column_regex_filter,
                 FromClient::get_set_column_regex_filter,
             ));
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetColumnFilterCombination>(
+                "set_column_filter_combination",
+                FromClient::has_set_column_filter_combination,
+                FromClient::get_set_column_filter_combination,
+            ));
             fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetColumnSeparators>(
                 "set_column_separators",
                 FromClient::has_set_column_separators,
                 FromClient::get_set_column_separators,
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, SetColumnRegexSeparator>(
+                "set_column_regex_separator",
+                FromClient::has_set_column_regex_separator,
+                FromClient::get_set_column_regex_separator,
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<FromClient>(
                 "FromClient",
@@ -2446,6 +4146,10 @@ impl ::protobuf::Message for FromClient {
 
 impl ::protobuf::Clear for FromClient {
     fn clear(&mut self) {
+        self.inner = ::std::option::Option::None;
+        self.inner = ::std::option::Option::None;
+        self.inner = ::std::option::Option::None;
+        self.inner = ::std::option::Option::None;
         self.inner = ::std::option::Option::None;
         self.inner = ::std::option::Option::None;
         self.inner = ::std::option::Option::None;
@@ -2474,30 +4178,49 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x18\x01\x20\x01(\tR\x0bdescription\"n\n\nFromServer\x12\x18\n\x06output\
     \x18\x01\x20\x01(\x0cH\0R\x06output\x12=\n\x10unexpected_error\x18\x02\
     \x20\x01(\x0b2\x10.UnexpectedErrorH\0R\x0funexpectedErrorB\x07\n\x05inne\
-    r\"\x98\x02\n\nInitialize\x12*\n\x11row_index_filters\x18\x01\x20\x01(\t\
-    R\x0frowIndexFilters\x12(\n\x10row_regex_filter\x18\x02\x20\x01(\tR\x0er\
-    owRegexFilter\x12%\n\x0erow_separators\x18\x03\x20\x03(\tR\rrowSeparator\
-    s\x120\n\x14column_index_filters\x18\x04\x20\x01(\tR\x12columnIndexFilte\
-    rs\x12.\n\x13column_regex_filter\x18\x05\x20\x01(\tR\x11columnRegexFilte\
-    r\x12+\n\x11column_separators\x18\x06\x20\x03(\tR\x10columnSeparators\".\
-    \n\x12SetRowIndexFilters\x12\x18\n\x07filters\x18\x01\x20\x01(\tR\x07fil\
-    ters\"+\n\x11SetRowRegexFilter\x12\x16\n\x06filter\x18\x01\x20\x01(\tR\
-    \x06filter\"2\n\x10SetRowSeparators\x12\x1e\n\nseparators\x18\x01\x20\
-    \x03(\tR\nseparators\"1\n\x15SetColumnIndexFilters\x12\x18\n\x07filters\
+    r\"\x05\n\x03And\"\x04\n\x02Or\"G\n\x0bCombination\x12\x18\n\x03and\x18\
+    \x01\x20\x01(\x0b2\x04.AndH\0R\x03and\x12\x15\n\x02or\x18\x02\x20\x01(\
+    \x0b2\x03.OrH\0R\x02orB\x07\n\x05inner\"\x8c\x04\n\nInitialize\x12*\n\
+    \x11row_index_filters\x18\x01\x20\x01(\tR\x0frowIndexFilters\x12(\n\x10r\
+    ow_regex_filter\x18\x02\x20\x01(\tR\x0erowRegexFilter\x12B\n\x16row_filt\
+    er_combination\x18\x03\x20\x01(\x0b2\x0c.CombinationR\x14rowFilterCombin\
+    ation\x12%\n\x0erow_separators\x18\x04\x20\x03(\tR\rrowSeparators\x12.\n\
+    \x13row_regex_separator\x18\x05\x20\x01(\tR\x11rowRegexSeparator\x120\n\
+    \x14column_index_filters\x18\x06\x20\x01(\tR\x12columnIndexFilters\x12.\
+    \n\x13column_regex_filter\x18\x07\x20\x01(\tR\x11columnRegexFilter\x12H\
+    \n\x19column_filter_combination\x18\x08\x20\x01(\x0b2\x0c.CombinationR\
+    \x17columnFilterCombination\x12+\n\x11column_separators\x18\t\x20\x03(\t\
+    R\x10columnSeparators\x124\n\x16column_regex_separator\x18\n\x20\x01(\tR\
+    \x14columnRegexSeparator\".\n\x12SetRowIndexFilters\x12\x18\n\x07filters\
+    \x18\x01\x20\x01(\tR\x07filters\"+\n\x11SetRowRegexFilter\x12\x16\n\x06f\
+    ilter\x18\x01\x20\x01(\tR\x06filter\"I\n\x17SetRowFilterCombination\x12.\
+    \n\x0bcombination\x18\x01\x20\x01(\x0b2\x0c.CombinationR\x0bcombination\
+    \"2\n\x10SetRowSeparators\x12\x1e\n\nseparators\x18\x01\x20\x03(\tR\nsep\
+    arators\"4\n\x14SetRowRegexSeparator\x12\x1c\n\tseparator\x18\x01\x20\
+    \x01(\tR\tseparator\"1\n\x15SetColumnIndexFilters\x12\x18\n\x07filters\
     \x18\x01\x20\x01(\tR\x07filters\".\n\x14SetColumnRegexFilter\x12\x16\n\
-    \x06filter\x18\x01\x20\x01(\tR\x06filter\"5\n\x13SetColumnSeparators\x12\
-    \x1e\n\nseparators\x18\x01\x20\x03(\tR\nseparators\"\x87\x04\n\nFromClie\
-    nt\x12-\n\ninitialize\x18\x01\x20\x01(\x0b2\x0b.InitializeH\0R\ninitiali\
-    ze\x12H\n\x15set_row_index_filters\x18\x02\x20\x01(\x0b2\x13.SetRowIndex\
-    FiltersH\0R\x12setRowIndexFilters\x12E\n\x14set_row_regex_filter\x18\x03\
-    \x20\x01(\x0b2\x12.SetRowRegexFilterH\0R\x11setRowRegexFilter\x12A\n\x12\
-    set_row_separators\x18\x04\x20\x01(\x0b2\x11.SetRowSeparatorsH\0R\x10set\
-    RowSeparators\x12Q\n\x18set_column_index_filters\x18\x05\x20\x01(\x0b2\
-    \x16.SetColumnIndexFiltersH\0R\x15setColumnIndexFilters\x12N\n\x17set_co\
-    lumn_regex_filter\x18\x06\x20\x01(\x0b2\x15.SetColumnRegexFilterH\0R\x14\
-    setColumnRegexFilter\x12J\n\x15set_column_separators\x18\x07\x20\x01(\
-    \x0b2\x14.SetColumnSeparatorsH\0R\x13setColumnSeparatorsB\x07\n\x05inner\
-    b\x06proto3\
+    \x06filter\x18\x01\x20\x01(\tR\x06filter\"L\n\x1aSetColumnFilterCombinat\
+    ion\x12.\n\x0bcombination\x18\x01\x20\x01(\x0b2\x0c.CombinationR\x0bcomb\
+    ination\"5\n\x13SetColumnSeparators\x12\x1e\n\nseparators\x18\x01\x20\
+    \x03(\tR\nseparators\"7\n\x17SetColumnRegexSeparator\x12\x1c\n\tseparato\
+    r\x18\x01\x20\x01(\tR\tseparator\"\xeb\x06\n\nFromClient\x12-\n\ninitial\
+    ize\x18\x01\x20\x01(\x0b2\x0b.InitializeH\0R\ninitialize\x12H\n\x15set_r\
+    ow_index_filters\x18\x02\x20\x01(\x0b2\x13.SetRowIndexFiltersH\0R\x12set\
+    RowIndexFilters\x12E\n\x14set_row_regex_filter\x18\x03\x20\x01(\x0b2\x12\
+    .SetRowRegexFilterH\0R\x11setRowRegexFilter\x12W\n\x1aset_row_filter_com\
+    bination\x18\x04\x20\x01(\x0b2\x18.SetRowFilterCombinationH\0R\x17setRow\
+    FilterCombination\x12A\n\x12set_row_separators\x18\x05\x20\x01(\x0b2\x11\
+    .SetRowSeparatorsH\0R\x10setRowSeparators\x12N\n\x17set_row_regex_separa\
+    tor\x18\x06\x20\x01(\x0b2\x15.SetRowRegexSeparatorH\0R\x14setRowRegexSep\
+    arator\x12Q\n\x18set_column_index_filters\x18\x07\x20\x01(\x0b2\x16.SetC\
+    olumnIndexFiltersH\0R\x15setColumnIndexFilters\x12N\n\x17set_column_rege\
+    x_filter\x18\x08\x20\x01(\x0b2\x15.SetColumnRegexFilterH\0R\x14setColumn\
+    RegexFilter\x12`\n\x1dset_column_filter_combination\x18\t\x20\x01(\x0b2\
+    \x1b.SetColumnFilterCombinationH\0R\x1asetColumnFilterCombination\x12J\n\
+    \x15set_column_separators\x18\n\x20\x01(\x0b2\x14.SetColumnSeparatorsH\0\
+    R\x13setColumnSeparators\x12W\n\x1aset_column_regex_separator\x18\x0b\
+    \x20\x01(\x0b2\x18.SetColumnRegexSeparatorH\0R\x17setColumnRegexSeparato\
+    rB\x07\n\x05innerb\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

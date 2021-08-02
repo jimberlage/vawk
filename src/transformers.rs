@@ -5,18 +5,28 @@ use regex::bytes::Regex;
 use std::io;
 
 #[derive(Debug)]
+pub enum Combination {
+    And,
+    Or,
+}
+
+#[derive(Debug)]
 pub struct Options {
     pub separators: Option<ByteTrie>,
+    pub regex_separator: Option<Regex>,
     pub regex_filter: Option<Regex>,
     pub index_filters: Option<Vec<IndexFilter>>,
+    pub filters_combination: Option<Combination>,
 }
 
 impl Options {
     pub fn default() -> Options {
         Options {
             separators: None,
+            regex_separator: None,
             regex_filter: None,
             index_filters: None,
+            filters_combination: None,
         }
     }
 }
@@ -59,6 +69,22 @@ fn split(separators: &ByteTrie, data: &Vec<u8>) -> Vec<Vec<u8>> {
     result
 }
 
+fn split_all(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
+    let result = match &options.separators {
+        None => vec![data.clone()],
+        Some(separators) => split(separators, data),
+    };
+
+    match &options.regex_separator {
+        None => result,
+        Some(regex_separator) => {
+            result.iter().map(|field| {
+                regex_separator.split(field).map(|field| field.to_vec()).collect::<Vec<Vec<u8>>>()
+            }).flatten().collect()
+        }
+    }
+}
+
 /// Parse the rules for indexes, then keep only entries in the data that match the rules given for indexes.
 ///
 /// This function is a bit atypical in that the rules_str argument is expected to be user input, and has purposefully relaxed parsing logic.
@@ -83,21 +109,32 @@ fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
-    let mut result = match options.separators {
-        None => vec![data.clone()],
-        Some(ref separators) => split(separators, data),
-    };
+fn keep_matches(options: &Options, data: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let mut result = vec![];
 
-    if let Some(ref index_filters) = options.index_filters {
-        result = keep_index_matches(index_filters, result);
-    }
+    for i in 0..data.len() {
+        let should_keep = match (&options.index_filters, &options.regex_filter, &options.filters_combination) {
+            (None, None, _) => true,
+            (Some(ref index_filters), None, _) => index_filters.iter().any(|rule| rule.is_match(i)),
+            (None, Some(ref regex_filter), _) => regex_filter.is_match(data[i].as_slice()),
+            (Some(ref index_filters), Some(ref regex_filter), Some(Combination::Or)) => {
+                index_filters.iter().any(|rule| rule.is_match(i)) || regex_filter.is_match(data[i].as_slice())
+            },
+            (Some(ref index_filters), Some(ref regex_filter), _) => {
+                index_filters.iter().any(|rule| rule.is_match(i)) && regex_filter.is_match(data[i].as_slice())
+            },
+        };
 
-    if let Some(ref regex_filter) = options.regex_filter {
-        result = keep_regex_matches(regex_filter, result);
+        if should_keep {
+            result.push(data[i].clone());
+        }
     }
 
     result
+}
+
+fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
+    keep_matches(options, &split_all(options, data))
 }
 
 pub fn transform_output(

@@ -7,12 +7,7 @@
 ///
 /// For simplicity's sake, text messages are treated as binary.
 use crate::parsers;
-use crate::protos::definitions::{
-    FromClient, FromClient_oneof_inner as FromClientInner, FromServer,
-    FromServer_oneof_inner as FromServerInner, Initialize, SetColumnIndexFilters,
-    SetColumnRegexFilter, SetColumnSeparators, SetRowIndexFilters, SetRowRegexFilter,
-    SetRowSeparators, UnexpectedError,
-};
+use crate::protos::definitions::{Combination, FromClient, FromClient_oneof_inner as FromClientInner, FromServer, FromServer_oneof_inner as FromServerInner, Initialize, SetColumnFilterCombination, SetColumnIndexFilters, SetColumnRegexFilter, SetColumnRegexSeparator, SetColumnSeparators, SetRowFilterCombination, SetRowIndexFilters, SetRowRegexFilter, SetRowRegexSeparator, SetRowSeparators, UnexpectedError};
 use crate::transformers;
 
 use actix::prelude::*;
@@ -39,10 +34,10 @@ impl fmt::Display for MessageParseError {
 enum InitializeError {
     InvalidRowFieldSeparatorError(parsers::InvalidFieldSeparatorError),
     InvalidRowIndexFiltersError(parsers::InvalidIndexFiltersError),
-    InvalidRowRegexFilterError(parsers::InvalidRegexFilterError),
+    InvalidRowRegexFilterError(parsers::InvalidRegexError),
     InvalidColumnFieldSeparatorError(parsers::InvalidFieldSeparatorError),
     InvalidColumnIndexFiltersError(parsers::InvalidIndexFiltersError),
-    InvalidColumnRegexFilterError(parsers::InvalidRegexFilterError),
+    InvalidColumnRegexFilterError(parsers::InvalidRegexError),
 }
 
 impl fmt::Display for InitializeError {
@@ -173,10 +168,11 @@ impl WebsocketConnection {
         }
         if initial_values.get_row_regex_filter() != "" {
             self.row_options.regex_filter = Some(
-                parsers::parse_regex_filter(initial_values.get_row_regex_filter())
+                parsers::parse_regex(initial_values.get_row_regex_filter())
                     .map_err(|error| InitializeError::InvalidRowRegexFilterError(error))?,
             );
         }
+        // TODO: Set combinations
         self.column_options.separators = Some(
             parsers::parse_field_separators(initial_values.get_column_separators())
                 .map_err(|error| InitializeError::InvalidColumnFieldSeparatorError(error))?,
@@ -189,7 +185,7 @@ impl WebsocketConnection {
         }
         if initial_values.get_column_regex_filter() != "" {
             self.column_options.regex_filter = Some(
-                parsers::parse_regex_filter(initial_values.get_column_regex_filter())
+                parsers::parse_regex(initial_values.get_column_regex_filter())
                     .map_err(|error| InitializeError::InvalidColumnRegexFilterError(error))?,
             );
         }
@@ -221,13 +217,13 @@ impl WebsocketConnection {
     fn set_column_regex_filter(
         &mut self,
         filter: SetColumnRegexFilter,
-    ) -> Result<(), parsers::InvalidRegexFilterError> {
+    ) -> Result<(), parsers::InvalidRegexError> {
         if filter.get_filter() == "" {
             self.column_options.regex_filter = None;
             return Ok(());
         }
 
-        match parsers::parse_regex_filter(filter.get_filter()) {
+        match parsers::parse_regex(filter.get_filter()) {
             Ok(parsed_filter) => {
                 self.column_options.regex_filter = Some(parsed_filter);
                 Ok(())
@@ -238,6 +234,8 @@ impl WebsocketConnection {
             }
         }
     }
+
+    fn set_column_filter_combination(&mut self, combination: SetColumnFilterCombination) {}
 
     fn set_column_separators(
         &mut self,
@@ -250,6 +248,27 @@ impl WebsocketConnection {
             }
             Err(error) => {
                 self.column_options.separators = None;
+                Err(error)
+            }
+        }
+    }
+
+    fn set_column_regex_separator(
+        &mut self,
+        separator: SetColumnRegexSeparator,
+    ) -> Result<(), parsers::InvalidRegexError> {
+        if separator.get_separator() == "" {
+            self.column_options.regex_separator = None;
+            return Ok(());
+        }
+
+        match parsers::parse_regex(separator.get_separator()) {
+            Ok(parsed_separator) => {
+                self.column_options.regex_separator = Some(parsed_separator);
+                Ok(())
+            }
+            Err(error) => {
+                self.column_options.regex_separator = None;
                 Err(error)
             }
         }
@@ -279,13 +298,13 @@ impl WebsocketConnection {
     fn set_row_regex_filter(
         &mut self,
         filter: SetRowRegexFilter,
-    ) -> Result<(), parsers::InvalidRegexFilterError> {
+    ) -> Result<(), parsers::InvalidRegexError> {
         if filter.get_filter() == "" {
             self.row_options.regex_filter = None;
             return Ok(());
         }
 
-        match parsers::parse_regex_filter(filter.get_filter()) {
+        match parsers::parse_regex(filter.get_filter()) {
             Ok(parsed_filter) => {
                 self.row_options.regex_filter = Some(parsed_filter);
                 Ok(())
@@ -296,6 +315,8 @@ impl WebsocketConnection {
             }
         }
     }
+
+    fn set_row_filter_combination(&mut self, combination: SetRowFilterCombination) {}
 
     fn set_row_separators(
         &mut self,
@@ -308,6 +329,27 @@ impl WebsocketConnection {
             }
             Err(error) => {
                 self.row_options.separators = None;
+                Err(error)
+            }
+        }
+    }
+
+    fn set_row_regex_separator(
+        &mut self,
+        separator: SetRowRegexSeparator,
+    ) -> Result<(), parsers::InvalidRegexError> {
+        if separator.get_separator() == "" {
+            self.row_options.regex_separator = None;
+            return Ok(());
+        }
+
+        match parsers::parse_regex(separator.get_separator()) {
+            Ok(parsed_separator) => {
+                self.row_options.regex_separator = Some(parsed_separator);
+                Ok(())
+            }
+            Err(error) => {
+                self.row_options.regex_separator = None;
                 Err(error)
             }
         }
@@ -346,8 +388,25 @@ impl WebsocketConnection {
                         }
                     }
                 }
+                Some(FromClientInner::set_column_filter_combination(set_column_filter_combination)) => {
+                    self.set_column_filter_combination(set_column_filter_combination);
+
+                    if let Err(error) = self.send_csvs(ctx) {
+                        self.send_error(ctx, error);
+                    }
+                }
                 Some(FromClientInner::set_column_separators(set_column_separators)) => {
                     match self.set_column_separators(set_column_separators) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_column_regex_separator(set_column_regex_separator)) => {
+                    match self.set_column_regex_separator(set_column_regex_separator) {
                         Err(error) => self.send_error(ctx, error),
                         Ok(()) => {
                             if let Err(error) = self.send_csvs(ctx) {
@@ -376,8 +435,25 @@ impl WebsocketConnection {
                         }
                     }
                 }
+                Some(FromClientInner::set_row_filter_combination(set_row_filter_combination)) => {
+                    self.set_row_filter_combination(set_row_filter_combination);
+
+                    if let Err(error) = self.send_csvs(ctx) {
+                        self.send_error(ctx, error);
+                    }
+                }
                 Some(FromClientInner::set_row_separators(set_row_separators)) => {
                     match self.set_row_separators(set_row_separators) {
+                        Err(error) => self.send_error(ctx, error),
+                        Ok(()) => {
+                            if let Err(error) = self.send_csvs(ctx) {
+                                self.send_error(ctx, error);
+                            }
+                        }
+                    }
+                }
+                Some(FromClientInner::set_row_regex_separator(set_row_regex_separator)) => {
+                    match self.set_row_regex_separator(set_row_regex_separator) {
                         Err(error) => self.send_error(ctx, error),
                         Ok(()) => {
                             if let Err(error) = self.send_csvs(ctx) {

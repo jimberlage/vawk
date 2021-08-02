@@ -30,11 +30,11 @@ impl fmt::Display for InvalidIndexFiltersError {
 }
 
 #[derive(Debug)]
-pub struct InvalidRegexFilterError(String);
+pub struct InvalidRegexError(String);
 
-impl fmt::Display for InvalidRegexFilterError {
+impl fmt::Display for InvalidRegexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Got an invalid regex filter:\n{}", self.0)
+        write!(f, "Got an invalid regex:\n{}", self.0)
     }
 }
 
@@ -186,8 +186,8 @@ pub fn parse_index_filters(
     }
 }
 
-pub fn parse_regex_filter(string_representation: &str) -> Result<Regex, InvalidRegexFilterError> {
-    Regex::new(string_representation).map_err(|error| InvalidRegexFilterError(format!("{}", error)))
+pub fn parse_regex(string_representation: &str) -> Result<Regex, InvalidRegexError> {
+    Regex::new(string_representation).map_err(|error| InvalidRegexError(format!("{}", error)))
 }
 
 #[cfg(test)]

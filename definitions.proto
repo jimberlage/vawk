@@ -11,13 +11,28 @@ message FromServer {
     }
 }
 
+message And {}
+
+message Or {}
+
+message Combination {
+    oneof inner {
+        And and = 1;
+        Or or = 2;
+    }
+}
+
 message Initialize {
     string row_index_filters = 1;
     string row_regex_filter = 2;
-    repeated string row_separators = 3;
-    string column_index_filters = 4;
-    string column_regex_filter = 5;
-    repeated string column_separators = 6;
+    Combination row_filter_combination = 3;
+    repeated string row_separators = 4;
+    string row_regex_separator = 5;
+    string column_index_filters = 6;
+    string column_regex_filter = 7;
+    Combination column_filter_combination = 8;
+    repeated string column_separators = 9;
+    string column_regex_separator = 10;
 }
 
 message SetRowIndexFilters {
@@ -28,8 +43,16 @@ message SetRowRegexFilter {
     string filter = 1;
 }
 
+message SetRowFilterCombination {
+    Combination combination = 1;
+}
+
 message SetRowSeparators {
     repeated string separators = 1;
+}
+
+message SetRowRegexSeparator {
+    string separator = 1;
 }
 
 message SetColumnIndexFilters {
@@ -40,8 +63,16 @@ message SetColumnRegexFilter {
     string filter = 1;
 }
 
+message SetColumnFilterCombination {
+    Combination combination = 1;
+}
+
 message SetColumnSeparators {
     repeated string separators = 1;
+}
+
+message SetColumnRegexSeparator {
+    string separator = 1;
 }
 
 message FromClient {
@@ -49,9 +80,13 @@ message FromClient {
         Initialize initialize = 1;
         SetRowIndexFilters set_row_index_filters = 2;
         SetRowRegexFilter set_row_regex_filter = 3;
-        SetRowSeparators set_row_separators = 4;
-        SetColumnIndexFilters set_column_index_filters = 5;
-        SetColumnRegexFilter set_column_regex_filter = 6;
-        SetColumnSeparators set_column_separators = 7;
+        SetRowFilterCombination set_row_filter_combination = 4;
+        SetRowSeparators set_row_separators = 5;
+        SetRowRegexSeparator set_row_regex_separator = 6;
+        SetColumnIndexFilters set_column_index_filters = 7;
+        SetColumnRegexFilter set_column_regex_filter = 8;
+        SetColumnFilterCombination set_column_filter_combination = 9;
+        SetColumnSeparators set_column_separators = 10;
+        SetColumnRegexSeparator set_column_regex_separator = 11;
     }
 }
