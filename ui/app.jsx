@@ -1,7 +1,19 @@
 import Papa from 'papaparse';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { FromClient, FromServer, Initialize, SetRowSeparators, SetRowIndexFilters, SetRowRegexFilter, SetColumnSeparators, SetColumnIndexFilters, SetColumnRegexFilter } from './definitions_pb.js';
+import {
+  FromClient,
+  FromServer,
+  Initialize,
+  SetRowSeparators,
+  SetRowRegexSeparator,
+  SetRowIndexFilters,
+  SetRowRegexFilter,
+  SetColumnSeparators,
+  SetColumnRegexSeparator,
+  SetColumnIndexFilters,
+  SetColumnRegexFilter,
+} from './definitions_pb.js';
 import "./app.css";
 
 const BlurredInput = (props) => {
@@ -24,11 +36,17 @@ const BlurredInput = (props) => {
   )
 }
 
-const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
-  <div className='flex flex-col'>
+const SeparatorsOptions = ({
+  defaultSeparators,
+  onChangeSeparators,
+  defaultSeparatorRegex,
+  onChangeSeparatorRegex
+}) => (
+  <div className='flex flex-col flex-1'>
+    <h1>Separators</h1>
     <label class='label'>
       <span class='label-text'>
-        Add one or more separators to split on
+        Add one or more separator literals to split on
       </span>
     </label>
     {defaultSeparators.map((separator, i) => (
@@ -69,22 +87,30 @@ const SeparatorsOptions = ({ defaultSeparators, onChangeSeparators }) => (
     >
       Add separator
     </button>
+    <label class='label'>
+      <span class='label-text'>
+        Or split on a regex
+      </span>
+    </label>
+    <BlurredInput
+      className='input input-bordered'
+      type='text'
+      defaultValue={defaultSeparatorRegex}
+      onBlur={(event) => {
+        onChangeSeparatorRegex(event.target.value);
+      }}
+    />
   </div>
 );
 
-const Options = ({
-  defaultSeparators,
-  onChangeSeparators,
+const FiltersOptions = ({
   defaultIndexFilters,
   onChangeIndexFilters,
   defaultRegexFilter,
   onChangeRegexFilter,
 }) => (
   <div className='flex flex-col flex-1'>
-    <SeparatorsOptions
-      defaultSeparators={defaultSeparators}
-      onChangeSeparators={onChangeSeparators}
-    />
+    <h1>Filters</h1>
     <div className='form-control'>
       <label class='label'>
         <span class='label-text'>
@@ -100,21 +126,50 @@ const Options = ({
         }}
       />
     </div>
-    <div className='form-control'>
-      <label class='label'>
-        <span class='label-text'>
-          Add a regex that lines should match, like "\.gitignore"
-        </span>
-      </label>
-      <BlurredInput
-        className='input input-bordered'
-        type='text'
-        defaultValue={defaultRegexFilter}
-        onBlur={(event) => {
-          onChangeRegexFilter(event.target.value);
-        }}
-      />
-    </div>
+    {defaultRegexFilter !== undefined && onChangeRegexFilter !== undefined ? (
+      <div className='form-control'>
+        <label class='label'>
+          <span class='label-text'>
+            Add a regex that lines should match, like "\.gitignore"
+          </span>
+        </label>
+        <BlurredInput
+          className='input input-bordered'
+          type='text'
+          defaultValue={defaultRegexFilter}
+          onBlur={(event) => {
+            onChangeRegexFilter(event.target.value);
+          }}
+        />
+      </div>
+    ) : null}
+  </div>
+);
+
+const Options = ({
+  defaultSeparators,
+  onChangeSeparators,
+  defaultSeparatorRegex,
+  onChangeSeparatorRegex,
+  defaultIndexFilters,
+  onChangeIndexFilters,
+  defaultRegexFilter,
+  onChangeRegexFilter,
+}) => (
+  <div className='flex flex-col flex-1'>
+    <SeparatorsOptions
+      defaultSeparators={defaultSeparators}
+      onChangeSeparators={onChangeSeparators}
+      defaultSeparatorRegex={defaultSeparatorRegex}
+      onChangeSeparatorRegex={onChangeSeparatorRegex}
+    />
+    <div className='h-4' />
+    <FiltersOptions
+      defaultIndexFilters={defaultIndexFilters}
+      onChangeIndexFilters={onChangeIndexFilters}
+      defaultRegexFilter={defaultRegexFilter}
+      onChangeRegexFilter={onChangeRegexFilter}
+    />
   </div>
 );
 
@@ -123,6 +178,14 @@ const serializeSetRowSeparatorsMessage = (separators) => {
   const message = new SetRowSeparators();
   message.setSeparatorsList(separators);
   result.setSetRowSeparators(message);
+  return result.serializeBinary().buffer;
+}
+
+const serializeSetRowSeparatorRegexMessage = (separators) => {
+  const result = new FromClient();
+  const message = new SetRowRegexSeparator();
+  message.setSeparator(separators);
+  result.setSetRowRegexSeparator(message);
   return result.serializeBinary().buffer;
 }
 
@@ -146,13 +209,28 @@ const serializeSetRowRegexFilterMessage = (regexFilter) => {
   return result.serializeBinary().buffer;
 }
 
-const RowOptions = ({ connection, separators, setSeparators, indexFilters, setIndexFilters, regexFilter, setRegexFilter }) => {
+const RowOptions = ({
+  connection,
+  separators,
+  setSeparators,
+  separatorRegex,
+  setSeparatorRegex,
+  indexFilters,
+  setIndexFilters,
+  regexFilter,
+  setRegexFilter,
+}) => {
   return (
     <Options
       defaultSeparators={separators}
       onChangeSeparators={(newSeparators) => {
         setSeparators(newSeparators);
         connection.send(serializeSetRowSeparatorsMessage(newSeparators));
+      }}
+      defaultSeparatorRegex={separatorRegex}
+      onChangeSeparatorRegex={(newSeparatorRegex) => {
+        setSeparatorRegex(newSeparatorRegex);
+        connection.send(serializeSetRowSeparatorRegexMessage(newSeparatorRegex));
       }}
       defaultIndexFilters={indexFilters}
       onChangeIndexFilters={(newIndexFilters) => {
@@ -176,6 +254,14 @@ const serializeSetColumnSeparatorsMessage = (separators) => {
   return result.serializeBinary().buffer;
 }
 
+const serializeSetColumnSeparatorRegexMessage = (separators) => {
+  const result = new FromClient();
+  const message = new SetColumnRegexSeparator();
+  message.setSeparator(separators);
+  result.setSetColumnRegexSeparator(message);
+  return result.serializeBinary().buffer;
+}
+
 const serializeSetColumnIndexFiltersMessage = (indexFilters) => {
   const result = new FromClient();
   const message = new SetColumnIndexFilters();
@@ -186,17 +272,15 @@ const serializeSetColumnIndexFiltersMessage = (indexFilters) => {
   return result.serializeBinary().buffer;
 }
 
-const serializeSetColumnRegexFilterMessage = (regexFilter) => {
-  const result = new FromClient();
-  const message = new SetColumnRegexFilter();
-  if (regexFilter !== '') {
-    message.setFilter(regexFilter);
-  }
-  result.setSetColumnRegexFilter(message);
-  return result.serializeBinary().buffer;
-}
-
-const ColumnOptions = ({ connection, separators, setSeparators, indexFilters, setIndexFilters, regexFilter, setRegexFilter }) => {
+const ColumnOptions = ({
+  connection,
+  separators,
+  setSeparators,
+  separatorRegex,
+  setSeparatorRegex,
+  indexFilters,
+  setIndexFilters,
+}) => {
   return (
     <Options
       defaultSeparators={separators}
@@ -204,15 +288,15 @@ const ColumnOptions = ({ connection, separators, setSeparators, indexFilters, se
         setSeparators(newSeparators);
         connection.send(serializeSetColumnSeparatorsMessage(newSeparators));
       }}
+      defaultSeparatorRegex={separatorRegex}
+      onChangeSeparatorRegex={(newSeparatorRegex) => {
+        setSeparatorRegex(newSeparatorRegex);
+        connection.send(serializeSetColumnSeparatorRegexMessage(newSeparatorRegex));
+      }}
       defaultIndexFilters={indexFilters}
       onChangeIndexFilters={(newIndexFilters) => {
         setIndexFilters(newIndexFilters);
         connection.send(serializeSetColumnIndexFiltersMessage(newIndexFilters));
-      }}
-      defaultRegexFilter={regexFilter}
-      onChangeRegexFilter={(newRegexFilter) => {
-        setRegexFilter(newRegexFilter);
-        connection.send(serializeSetColumnRegexFilterMessage(newRegexFilter));
       }}
     />
   );
@@ -221,25 +305,27 @@ const ColumnOptions = ({ connection, separators, setSeparators, indexFilters, se
 const Sidebar = ({
   connection,
   defaultRowSeparators,
+  defaultRowSeparatorRegex,
   defaultRowIndexFilters,
   defaultRowRegexFilter,
   defaultColumnSeparators,
+  defaultColumnSeparatorRegex,
   defaultColumnIndexFilters,
-  defaultColumnRegexFilter
 }) => {
   const [isHidden, setIsHidden] = React.useState(false);
   const [tab, setTab] = React.useState('row');
   const [rowSeparators, setRowSeparators] = React.useState(defaultRowSeparators);
+  const [rowSeparatorRegex, setRowSeparatorRegex] = React.useState(defaultRowSeparatorRegex);
   const [rowIndexFilters, setRowIndexFilters] = React.useState(defaultRowIndexFilters);
   const [rowRegexFilter, setRowRegexFilter] = React.useState(defaultRowRegexFilter);
   const [columnSeparators, setColumnSeparators] = React.useState(defaultColumnSeparators);
+  const [columnSeparatorRegex, setColumnSeparatorRegex] = React.useState(defaultColumnSeparatorRegex);
   const [columnIndexFilters, setColumnIndexFilters] = React.useState(defaultColumnIndexFilters);
-  const [columnRegexFilter, setColumnRegexFilter] = React.useState(defaultColumnRegexFilter);
 
   if (isHidden) {
     return (
       <button
-        className='fixed top-4 right-4 btn btn-accent rounded-2xl opacity-60'
+        className='fixed top-4 right-4 btn btn-accent rounded-2xl opacity-60 z-10'
         onClick={(_event) => setIsHidden(false)}
       >
         Show controls
@@ -248,7 +334,7 @@ const Sidebar = ({
   }
 
   return (
-    <div className='card text-center shadow-2xl flex h-screen-8 w-1/6 fixed top-4 right-4 bg-white'>
+    <div className='card text-center shadow-2xl flex h-screen-8 w-1/6 fixed top-4 right-4 bg-white z-10'>
       <button
         className='btn btn-accent rounded-2xl mb-4'
         onClick={(_event) => setIsHidden(true)}
@@ -275,6 +361,8 @@ const Sidebar = ({
             connection={connection}
             separators={rowSeparators}
             setSeparators={setRowSeparators}
+            separatorRegex={rowSeparatorRegex}
+            setSeparatorRegex={setRowSeparatorRegex}
             indexFilters={rowIndexFilters}
             setIndexFilters={setRowIndexFilters}
             regexFilter={rowRegexFilter}
@@ -285,10 +373,10 @@ const Sidebar = ({
             connection={connection}
             separators={columnSeparators}
             setSeparators={setColumnSeparators}
+            separatorRegex={columnSeparatorRegex}
+            setSeparatorRegex={setColumnSeparatorRegex}
             indexFilters={columnIndexFilters}
             setIndexFilters={setColumnIndexFilters}
-            regexFilter={columnRegexFilter}
-            setRegexFilter={setColumnRegexFilter}
           />
         )}
       </div>
@@ -354,10 +442,13 @@ const handleMessage = async (messageEvent, setRows) => {
   setRows(parsedStdout.data);
 }
 
-const serializeInitializeMessage = (rowSeparators, rowIndexFilters, rowRegexFilter, columnSeparators, columnIndexFilters, columnRegexFilter) => {
+const serializeInitializeMessage = (rowSeparators, rowSeparatorRegex, rowIndexFilters, rowRegexFilter, columnSeparators, columnSeparatorRegex, columnIndexFilters) => {
   const result = new FromClient();
   const message = new Initialize();
   message.setRowSeparatorsList(rowSeparators);
+  if (rowSeparatorRegex !== '') {
+    message.setRowRegexSeparator(rowSeparatorRegex)
+  }
   if (rowIndexFilters !== '') {
     message.setRowIndexFilters(rowIndexFilters);
   }
@@ -365,11 +456,11 @@ const serializeInitializeMessage = (rowSeparators, rowIndexFilters, rowRegexFilt
     message.setRowRegexFilter(rowRegexFilter);
   }
   message.setColumnSeparatorsList(columnSeparators);
+  if (columnSeparatorRegex !== '') {
+    message.setColumnRegexSeparator(columnSeparatorRegex)
+  }
   if (columnIndexFilters !== '') {
     message.setColumnIndexFilters(columnIndexFilters);
-  }
-  if (columnRegexFilter !== '') {
-    message.setColumnRegexFilter(columnRegexFilter);
   }
   result.setInitialize(message);
   return result.serializeBinary().buffer;
@@ -377,11 +468,12 @@ const serializeInitializeMessage = (rowSeparators, rowIndexFilters, rowRegexFilt
 
 const App = () => {
   const defaultRowSeparators = ['\\n'];
+  const defaultRowSeparatorRegex = '';
   const defaultRowIndexFilters = '';
   const defaultRowRegexFilter = '';
-  const defaultColumnSeparators = ['\\s'];
+  const defaultColumnSeparators = [];
+  const defaultColumnSeparatorRegex = '\\s+';
   const defaultColumnIndexFilters = '';
-  const defaultColumnRegexFilter = '';
   const [connection, setConnection] = React.useState();
   const [rows, setRows] = React.useState();
 
@@ -391,7 +483,7 @@ const App = () => {
       const newConnection = new WebSocket(`ws://${window.location.host}/ws/`);
       newConnection.onopen = (_event) => {
         setConnection(newConnection);
-        newConnection.send(serializeInitializeMessage(defaultRowSeparators, defaultRowIndexFilters, defaultRowRegexFilter, defaultColumnSeparators, defaultColumnIndexFilters, defaultColumnRegexFilter));
+        newConnection.send(serializeInitializeMessage(defaultRowSeparators, defaultRowSeparatorRegex, defaultRowIndexFilters, defaultRowRegexFilter, defaultColumnSeparators, defaultColumnSeparatorRegex, defaultColumnIndexFilters));
       };
       newConnection.onclose = (_event) => {
         setConnection(undefined);
@@ -415,11 +507,12 @@ const App = () => {
       <Sidebar
         connection={connection}
         defaultRowSeparators={defaultRowSeparators}
+        defaultRowSeparatorRegex={defaultRowSeparatorRegex}
         defaultRowIndexFilters={defaultRowIndexFilters}
         defaultRowRegexFilter={defaultRowRegexFilter}
         defaultColumnSeparators={defaultColumnSeparators}
+        defaultColumnSeparatorRegex={defaultColumnSeparatorRegex}
         defaultColumnIndexFilters={defaultColumnIndexFilters}
-        defaultColumnRegexFilter={defaultColumnRegexFilter}
       />
     </div>
   );

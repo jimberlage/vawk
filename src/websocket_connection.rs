@@ -7,7 +7,14 @@
 ///
 /// For simplicity's sake, text messages are treated as binary.
 use crate::parsers;
-use crate::protos::definitions::{Combination, FromClient, FromClient_oneof_inner as FromClientInner, FromServer, FromServer_oneof_inner as FromServerInner, Initialize, SetColumnFilterCombination, SetColumnIndexFilters, SetColumnRegexFilter, SetColumnRegexSeparator, SetColumnSeparators, SetRowFilterCombination, SetRowIndexFilters, SetRowRegexFilter, SetRowRegexSeparator, SetRowSeparators, UnexpectedError};
+use crate::protos::definitions::{
+    Combination_oneof_inner as CombinationInner, FromClient,
+    FromClient_oneof_inner as FromClientInner, FromServer,
+    FromServer_oneof_inner as FromServerInner, Initialize, SetColumnFilterCombination,
+    SetColumnIndexFilters, SetColumnRegexFilter, SetColumnRegexSeparator, SetColumnSeparators,
+    SetRowFilterCombination, SetRowIndexFilters, SetRowRegexFilter, SetRowRegexSeparator,
+    SetRowSeparators, UnexpectedError,
+};
 use crate::transformers;
 
 use actix::prelude::*;
@@ -35,9 +42,11 @@ enum InitializeError {
     InvalidRowFieldSeparatorError(parsers::InvalidFieldSeparatorError),
     InvalidRowIndexFiltersError(parsers::InvalidIndexFiltersError),
     InvalidRowRegexFilterError(parsers::InvalidRegexError),
+    InvalidRowRegexSeparatorError(parsers::InvalidRegexError),
     InvalidColumnFieldSeparatorError(parsers::InvalidFieldSeparatorError),
     InvalidColumnIndexFiltersError(parsers::InvalidIndexFiltersError),
     InvalidColumnRegexFilterError(parsers::InvalidRegexError),
+    InvalidColumnRegexSeparatorError(parsers::InvalidRegexError),
 }
 
 impl fmt::Display for InitializeError {
@@ -52,6 +61,9 @@ impl fmt::Display for InitializeError {
             InitializeError::InvalidRowRegexFilterError(error) => {
                 write!(f, "The row regex filter is invalid:\n{}", error)
             }
+            InitializeError::InvalidRowRegexSeparatorError(error) => {
+                write!(f, "The row regex separator is invalid:\n{}", error)
+            }
             InitializeError::InvalidColumnFieldSeparatorError(error) => {
                 write!(f, "A column separator is invalid:\n{}", error)
             }
@@ -60,6 +72,9 @@ impl fmt::Display for InitializeError {
             }
             InitializeError::InvalidColumnRegexFilterError(error) => {
                 write!(f, "The column regex filter is invalid:\n{}", error)
+            }
+            InitializeError::InvalidColumnRegexSeparatorError(error) => {
+                write!(f, "The column regex separator is invalid:\n{}", error)
             }
         }
     }
@@ -160,6 +175,12 @@ impl WebsocketConnection {
             parsers::parse_field_separators(initial_values.get_row_separators())
                 .map_err(|error| InitializeError::InvalidRowFieldSeparatorError(error))?,
         );
+        if initial_values.get_row_regex_separator() != "" {
+            self.row_options.regex_separator = Some(
+                parsers::parse_regex(initial_values.get_row_regex_separator())
+                    .map_err(|error| InitializeError::InvalidRowRegexSeparatorError(error))?,
+            );
+        }
         if initial_values.get_row_index_filters() != "" {
             self.row_options.index_filters = Some(
                 parsers::parse_index_filters(initial_values.get_row_index_filters())
@@ -172,11 +193,22 @@ impl WebsocketConnection {
                     .map_err(|error| InitializeError::InvalidRowRegexFilterError(error))?,
             );
         }
-        // TODO: Set combinations
+        self.row_options.filters_combination =
+            match initial_values.get_row_filter_combination().inner {
+                Some(CombinationInner::and(_)) => Some(transformers::Combination::And),
+                Some(CombinationInner::or(_)) => Some(transformers::Combination::Or),
+                None => None,
+            };
         self.column_options.separators = Some(
             parsers::parse_field_separators(initial_values.get_column_separators())
                 .map_err(|error| InitializeError::InvalidColumnFieldSeparatorError(error))?,
         );
+        if initial_values.get_column_regex_separator() != "" {
+            self.column_options.regex_separator = Some(
+                parsers::parse_regex(initial_values.get_column_regex_separator())
+                    .map_err(|error| InitializeError::InvalidColumnRegexSeparatorError(error))?,
+            );
+        }
         if initial_values.get_column_index_filters() != "" {
             self.column_options.index_filters = Some(
                 parsers::parse_index_filters(initial_values.get_column_index_filters())
@@ -189,6 +221,12 @@ impl WebsocketConnection {
                     .map_err(|error| InitializeError::InvalidColumnRegexFilterError(error))?,
             );
         }
+        self.column_options.filters_combination =
+            match initial_values.get_column_filter_combination().inner {
+                Some(CombinationInner::and(_)) => Some(transformers::Combination::And),
+                Some(CombinationInner::or(_)) => Some(transformers::Combination::Or),
+                None => None,
+            };
 
         Ok(())
     }
@@ -235,7 +273,13 @@ impl WebsocketConnection {
         }
     }
 
-    fn set_column_filter_combination(&mut self, combination: SetColumnFilterCombination) {}
+    fn set_column_filter_combination(&mut self, combination: SetColumnFilterCombination) {
+        self.column_options.filters_combination = match combination.get_combination().inner {
+            Some(CombinationInner::and(_)) => Some(transformers::Combination::And),
+            Some(CombinationInner::or(_)) => Some(transformers::Combination::Or),
+            None => None,
+        }
+    }
 
     fn set_column_separators(
         &mut self,
@@ -316,7 +360,13 @@ impl WebsocketConnection {
         }
     }
 
-    fn set_row_filter_combination(&mut self, combination: SetRowFilterCombination) {}
+    fn set_row_filter_combination(&mut self, combination: SetRowFilterCombination) {
+        self.row_options.filters_combination = match combination.get_combination().inner {
+            Some(CombinationInner::and(_)) => Some(transformers::Combination::And),
+            Some(CombinationInner::or(_)) => Some(transformers::Combination::Or),
+            None => None,
+        }
+    }
 
     fn set_row_separators(
         &mut self,
@@ -388,7 +438,9 @@ impl WebsocketConnection {
                         }
                     }
                 }
-                Some(FromClientInner::set_column_filter_combination(set_column_filter_combination)) => {
+                Some(FromClientInner::set_column_filter_combination(
+                    set_column_filter_combination,
+                )) => {
                     self.set_column_filter_combination(set_column_filter_combination);
 
                     if let Err(error) = self.send_csvs(ctx) {

@@ -106,7 +106,10 @@ async fn run_server(
         app = if in_development_mode {
             app.service(actix_files::Files::new("/", "./ui/").index_file("index.html"))
         } else {
-            app.service(index).service(index_css).service(index_js).service(index_js_map)
+            app.service(index)
+                .service(index_css)
+                .service(index_js)
+                .service(index_js_map)
         };
 
         app.wrap(Logger::default()).wrap(Cors::permissive())

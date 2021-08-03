@@ -77,11 +77,16 @@ fn split_all(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
 
     match &options.regex_separator {
         None => result,
-        Some(regex_separator) => {
-            result.iter().map(|field| {
-                regex_separator.split(field).map(|field| field.to_vec()).collect::<Vec<Vec<u8>>>()
-            }).flatten().collect()
-        }
+        Some(regex_separator) => result
+            .iter()
+            .map(|field| {
+                regex_separator
+                    .split(field)
+                    .map(|field| field.to_vec())
+                    .collect::<Vec<Vec<u8>>>()
+            })
+            .flatten()
+            .collect(),
     }
 }
 
@@ -113,16 +118,22 @@ fn keep_matches(options: &Options, data: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let mut result = vec![];
 
     for i in 0..data.len() {
-        let should_keep = match (&options.index_filters, &options.regex_filter, &options.filters_combination) {
+        let should_keep = match (
+            &options.index_filters,
+            &options.regex_filter,
+            &options.filters_combination,
+        ) {
             (None, None, _) => true,
             (Some(ref index_filters), None, _) => index_filters.iter().any(|rule| rule.is_match(i)),
             (None, Some(ref regex_filter), _) => regex_filter.is_match(data[i].as_slice()),
             (Some(ref index_filters), Some(ref regex_filter), Some(Combination::Or)) => {
-                index_filters.iter().any(|rule| rule.is_match(i)) || regex_filter.is_match(data[i].as_slice())
-            },
+                index_filters.iter().any(|rule| rule.is_match(i))
+                    || regex_filter.is_match(data[i].as_slice())
+            }
             (Some(ref index_filters), Some(ref regex_filter), _) => {
-                index_filters.iter().any(|rule| rule.is_match(i)) && regex_filter.is_match(data[i].as_slice())
-            },
+                index_filters.iter().any(|rule| rule.is_match(i))
+                    && regex_filter.is_match(data[i].as_slice())
+            }
         };
 
         if should_keep {
