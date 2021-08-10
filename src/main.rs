@@ -85,7 +85,6 @@ async fn index_js_map(context: web::Data<Context>) -> impl actix_web::Responder 
 async fn run_server(
     stdin: Vec<u8>,
     socket_address: &str,
-    in_development_mode: bool,
 ) -> io::Result<()> {
     let html = include_str!("../ui/index.html");
     let css = include_str!("../ui/out.css");
@@ -93,7 +92,7 @@ async fn run_server(
     let js_map = include_str!("../ui/out.js.map");
 
     let server = actix_web::HttpServer::new(move || {
-        let mut app = actix_web::App::new()
+        actix_web::App::new()
             .data(Context {
                 bundled_html: html.to_owned(),
                 bundled_css: css.to_owned(),
@@ -101,18 +100,13 @@ async fn run_server(
                 bundled_js_map: js_map.to_owned(),
                 stdin: stdin.clone(),
             })
-            .service(web::resource("/ws/").route(web::get().to(connect)));
-
-        app = if in_development_mode {
-            app.service(actix_files::Files::new("/", "./ui/").index_file("index.html"))
-        } else {
-            app.service(index)
-                .service(index_css)
-                .service(index_js)
-                .service(index_js_map)
-        };
-
-        app.wrap(Logger::default()).wrap(Cors::permissive())
+            .service(web::resource("/ws/").route(web::get().to(connect)))
+            .service(index)
+            .service(index_css)
+            .service(index_js)
+            .service(index_js_map)
+            .wrap(Logger::default())
+            .wrap(Cors::permissive())
     })
     .bind(socket_address)?
     .run();
@@ -133,31 +127,32 @@ async fn main() {
     env_logger::init();
 
     let matches = App::new("VAWK (Visual AWK)")
-        .version("1.0")
+        .version("1.1.0")
         .author("Jim Berlage <jamesberlage@gmail.com>")
         .about("Allows users to view process output as a spreadsheet.")
         .arg(
-            Arg::with_name("development-mode")
-                .long("development-mode")
+            Arg::with_name("port")
+                .long("port")
+                .short("p")
                 .help(
-                    "Allows the user to run the frontend using esbuild for more rapid development.",
+                    "The port vawk should run on.",
                 )
-                .takes_value(false)
+                .default_value("6846")
+                .takes_value(true)
+                .value_name("PORT")
                 .required(false),
         )
         .get_matches();
-    let in_development_mode = matches.is_present("development-mode");
+    let port = matches.value_of("port").unwrap();
 
     let mut stdin = vec![];
     if let Err(error) = io::stdin().read_to_end(&mut stdin) {
         log::error!("Failed to read command input:\n{}", error);
     }
 
-    // TODO: Add CLI helpers and configure port.
-    let port = 6846;
     let socket_address = format!("127.0.0.1:{}", port);
 
-    if let Err(error) = run_server(stdin, &socket_address, in_development_mode).await {
+    if let Err(error) = run_server(stdin, &socket_address).await {
         log::error!("Failed to start server:\n{}", error);
     }
 }
