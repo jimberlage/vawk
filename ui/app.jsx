@@ -2,17 +2,20 @@ import Papa from 'papaparse';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import {
+  And,
+  Combination,
   FromClient,
   FromServer,
   Initialize,
-  SetRowSeparators,
-  SetRowRegexSeparator,
+  Or,
+  SetColumnIndexFilters,
+  SetColumnRegexSeparator,
+  SetColumnSeparators,
+  SetRowFilterCombination,
   SetRowIndexFilters,
   SetRowRegexFilter,
-  SetColumnSeparators,
-  SetColumnRegexSeparator,
-  SetColumnIndexFilters,
-  SetColumnRegexFilter,
+  SetRowRegexSeparator,
+  SetRowSeparators,
 } from './definitions_pb.js';
 import "./app.css";
 
@@ -106,14 +109,16 @@ const SeparatorsOptions = ({
 const FiltersOptions = ({
   defaultIndexFilters,
   onChangeIndexFilters,
+  filterCombination,
+  onChangeFilterCombination,
   defaultRegexFilter,
   onChangeRegexFilter,
 }) => (
   <div className='flex flex-col flex-1'>
     <h1>Filters</h1>
-    <div className='form-control'>
-      <label class='label'>
-        <span class='label-text'>
+    <div className='form-control pb-4'>
+      <label className='label'>
+        <span className='label-text'>
           Add indices to keep here, like "3" or "0..9" or "5.."
         </span>
       </label>
@@ -127,21 +132,45 @@ const FiltersOptions = ({
       />
     </div>
     {defaultRegexFilter !== undefined && onChangeRegexFilter !== undefined ? (
-      <div className='form-control'>
-        <label class='label'>
-          <span class='label-text'>
-            Add a regex that lines should match, like "\.gitignore"
-          </span>
-        </label>
-        <BlurredInput
-          className='input input-bordered'
-          type='text'
-          defaultValue={defaultRegexFilter}
-          onBlur={(event) => {
-            onChangeRegexFilter(event.target.value);
-          }}
-        />
-      </div>
+      <>
+        <div className='form-control items-center pb-4'>
+          <div className='btn-group'>
+            <input
+              type='radio'
+              data-title='And'
+              className='btn'
+              checked={filterCombination instanceof And}
+              onChange={(_event) => {
+                onChangeFilterCombination(new And());
+              }}
+            />
+            <input
+              type='radio'
+              data-title='Or'
+              className='btn'
+              checked={filterCombination instanceof Or}
+              onChange={(_event) => {
+                onChangeFilterCombination(new Or());
+              }}
+            />
+          </div>
+        </div>
+        <div className='form-control'>
+          <label className='label'>
+            <span className='label-text'>
+              Add a regex that lines should match, like "\.gitignore"
+            </span>
+          </label>
+          <BlurredInput
+            className='input input-bordered'
+            type='text'
+            defaultValue={defaultRegexFilter}
+            onBlur={(event) => {
+              onChangeRegexFilter(event.target.value);
+            }}
+          />
+        </div>
+      </>
     ) : null}
   </div>
 );
@@ -151,6 +180,8 @@ const Options = ({
   onChangeSeparators,
   defaultSeparatorRegex,
   onChangeSeparatorRegex,
+  filterCombination,
+  onChangeFilterCombination,
   defaultIndexFilters,
   onChangeIndexFilters,
   defaultRegexFilter,
@@ -167,6 +198,8 @@ const Options = ({
     <FiltersOptions
       defaultIndexFilters={defaultIndexFilters}
       onChangeIndexFilters={onChangeIndexFilters}
+      filterCombination={filterCombination}
+      onChangeFilterCombination={onChangeFilterCombination}
       defaultRegexFilter={defaultRegexFilter}
       onChangeRegexFilter={onChangeRegexFilter}
     />
@@ -186,6 +219,20 @@ const serializeSetRowSeparatorRegexMessage = (separators) => {
   const message = new SetRowRegexSeparator();
   message.setSeparator(separators);
   result.setSetRowRegexSeparator(message);
+  return result.serializeBinary().buffer;
+}
+
+const serializeSetRowFilterCombinationMessage = (combination) => {
+  const result = new FromClient();
+  const message = new SetRowFilterCombination();
+  const wrapper = new Combination();
+  if (combination instanceof And) {
+    wrapper.setAnd(combination);
+  } else if (combination instanceof Or) {
+    wrapper.setOr(combination);
+  }
+  message.setCombination(wrapper);
+  result.setSetRowFilterCombination(message);
   return result.serializeBinary().buffer;
 }
 
@@ -215,6 +262,8 @@ const RowOptions = ({
   setSeparators,
   separatorRegex,
   setSeparatorRegex,
+  filterCombination,
+  setFilterCombination,
   indexFilters,
   setIndexFilters,
   regexFilter,
@@ -231,6 +280,11 @@ const RowOptions = ({
       onChangeSeparatorRegex={(newSeparatorRegex) => {
         setSeparatorRegex(newSeparatorRegex);
         connection.send(serializeSetRowSeparatorRegexMessage(newSeparatorRegex));
+      }}
+      filterCombination={filterCombination}
+      onChangeFilterCombination={(newFilterCombination) => {
+        setFilterCombination(newFilterCombination);
+        connection.send(serializeSetRowFilterCombinationMessage(newFilterCombination));
       }}
       defaultIndexFilters={indexFilters}
       onChangeIndexFilters={(newIndexFilters) => {
@@ -306,6 +360,7 @@ const Sidebar = ({
   connection,
   defaultRowSeparators,
   defaultRowSeparatorRegex,
+  defaultRowFilterCombination,
   defaultRowIndexFilters,
   defaultRowRegexFilter,
   defaultColumnSeparators,
@@ -316,6 +371,7 @@ const Sidebar = ({
   const [tab, setTab] = React.useState('row');
   const [rowSeparators, setRowSeparators] = React.useState(defaultRowSeparators);
   const [rowSeparatorRegex, setRowSeparatorRegex] = React.useState(defaultRowSeparatorRegex);
+  const [rowFilterCombination, setRowFilterCombination] = React.useState(defaultRowFilterCombination);
   const [rowIndexFilters, setRowIndexFilters] = React.useState(defaultRowIndexFilters);
   const [rowRegexFilter, setRowRegexFilter] = React.useState(defaultRowRegexFilter);
   const [columnSeparators, setColumnSeparators] = React.useState(defaultColumnSeparators);
@@ -363,6 +419,8 @@ const Sidebar = ({
             setSeparators={setRowSeparators}
             separatorRegex={rowSeparatorRegex}
             setSeparatorRegex={setRowSeparatorRegex}
+            filterCombination={rowFilterCombination}
+            setFilterCombination={setRowFilterCombination}
             indexFilters={rowIndexFilters}
             setIndexFilters={setRowIndexFilters}
             regexFilter={rowRegexFilter}
@@ -442,19 +500,29 @@ const handleMessage = async (messageEvent, setRows) => {
   setRows(parsedStdout.data);
 }
 
-const serializeInitializeMessage = (rowSeparators, rowSeparatorRegex, rowIndexFilters, rowRegexFilter, columnSeparators, columnSeparatorRegex, columnIndexFilters) => {
+const serializeInitializeMessage = (rowSeparators, rowSeparatorRegex, rowFilterCombination, rowIndexFilters, rowRegexFilter, columnSeparators, columnSeparatorRegex, columnIndexFilters) => {
   const result = new FromClient();
   const message = new Initialize();
   message.setRowSeparatorsList(rowSeparators);
   if (rowSeparatorRegex !== '') {
     message.setRowRegexSeparator(rowSeparatorRegex)
   }
+
+  const combination = new Combination();
+  if (combination instanceof And) {
+    combination.setAnd(rowFilterCombination);
+  } else if (combination instanceof Or) {
+    combination.setOr(rowFilterCombination);
+  }
+  message.setRowFilterCombination(combination);
+
   if (rowIndexFilters !== '') {
     message.setRowIndexFilters(rowIndexFilters);
   }
   if (rowRegexFilter !== '') {
     message.setRowRegexFilter(rowRegexFilter);
   }
+
   message.setColumnSeparatorsList(columnSeparators);
   if (columnSeparatorRegex !== '') {
     message.setColumnRegexSeparator(columnSeparatorRegex)
@@ -462,6 +530,7 @@ const serializeInitializeMessage = (rowSeparators, rowSeparatorRegex, rowIndexFi
   if (columnIndexFilters !== '') {
     message.setColumnIndexFilters(columnIndexFilters);
   }
+
   result.setInitialize(message);
   return result.serializeBinary().buffer;
 }
@@ -469,6 +538,7 @@ const serializeInitializeMessage = (rowSeparators, rowSeparatorRegex, rowIndexFi
 const App = () => {
   const defaultRowSeparators = ['\\n'];
   const defaultRowSeparatorRegex = '';
+  const defaultRowFilterCombination = new Or();
   const defaultRowIndexFilters = '';
   const defaultRowRegexFilter = '';
   const defaultColumnSeparators = [];
@@ -483,7 +553,7 @@ const App = () => {
       const newConnection = new WebSocket(`ws://${window.location.host}/ws/`);
       newConnection.onopen = (_event) => {
         setConnection(newConnection);
-        newConnection.send(serializeInitializeMessage(defaultRowSeparators, defaultRowSeparatorRegex, defaultRowIndexFilters, defaultRowRegexFilter, defaultColumnSeparators, defaultColumnSeparatorRegex, defaultColumnIndexFilters));
+        newConnection.send(serializeInitializeMessage(defaultRowSeparators, defaultRowSeparatorRegex, defaultRowFilterCombination, defaultRowIndexFilters, defaultRowRegexFilter, defaultColumnSeparators, defaultColumnSeparatorRegex, defaultColumnIndexFilters));
       };
       newConnection.onclose = (_event) => {
         setConnection(undefined);
@@ -508,6 +578,7 @@ const App = () => {
         connection={connection}
         defaultRowSeparators={defaultRowSeparators}
         defaultRowSeparatorRegex={defaultRowSeparatorRegex}
+        defaultRowFilterCombination={defaultRowFilterCombination}
         defaultRowIndexFilters={defaultRowIndexFilters}
         defaultRowRegexFilter={defaultRowRegexFilter}
         defaultColumnSeparators={defaultColumnSeparators}
