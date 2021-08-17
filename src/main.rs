@@ -14,6 +14,9 @@ use env_logger;
 use std::io::{self, Read};
 use std::process::Command;
 use std::time::Duration;
+use futures::executor;
+use std::thread;
+use std::sync::mpsc;
 
 fn open_gui(socket_address: &str) -> io::Result<()> {
     let mut child = Command::new("open")
@@ -36,6 +39,7 @@ struct Context {
     bundled_js: String,
     bundled_js_map: String,
     stdin: Vec<u8>,
+    shutdown_channel: mpsc::Sender<()>,
 }
 
 async fn connect(
@@ -48,6 +52,7 @@ async fn connect(
             context.stdin.clone(),
             transformers::Options::default(),
             transformers::Options::default(),
+            context.shutdown_channel.clone(),
         ),
         &r,
         stream,
@@ -91,6 +96,8 @@ async fn run_server(
     let js = include_str!("../ui/out.js");
     let js_map = include_str!("../ui/out.js.map");
 
+    let (tx, rx) = mpsc::channel::<()>();
+
     let server = actix_web::HttpServer::new(move || {
         actix_web::App::new()
             .data(Context {
@@ -99,6 +106,7 @@ async fn run_server(
                 bundled_js: js.to_owned(),
                 bundled_js_map: js_map.to_owned(),
                 stdin: stdin.clone(),
+                shutdown_channel: tx.clone(),
             })
             .service(web::resource("/ws/").route(web::get().to(connect)))
             .service(index)
@@ -110,6 +118,19 @@ async fn run_server(
     })
     .bind(socket_address)?
     .run();
+
+    // clone the Server handle
+    let srv = server.clone();
+    thread::spawn(move || {
+        // wait for shutdown signal
+        if let Err(error) = rx.recv() {
+            log::error!("Got an error while shutting down:\n{}", error);
+            return;
+        }
+
+        // stop server gracefully
+        executor::block_on(srv.stop(true))
+    });
 
     // Give the server some time to spin up.
     // TODO: Add an on_running hook to actix-web.
@@ -127,7 +148,7 @@ async fn main() {
     env_logger::init();
 
     let matches = App::new("VAWK (Visual AWK)")
-        .version("1.2.0")
+        .version("1.3.0")
         .author("Jim Berlage <jamesberlage@gmail.com>")
         .about("Allows users to view process output as a spreadsheet.")
         .arg(

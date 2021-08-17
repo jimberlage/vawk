@@ -25,6 +25,7 @@ use protobuf::{Message as ProtobufMessage, ProtobufError};
 use std::fmt;
 use std::io;
 use std::time::{Duration, Instant};
+use std::sync::mpsc;
 
 struct MessageParseError(ProtobufError);
 
@@ -114,6 +115,7 @@ pub struct WebsocketConnection {
     row_options: transformers::Options,
     last_seen_heartbeat: Instant,
     continuation_frame: Option<BytesMut>,
+    shutdown_channel: mpsc::Sender<()>,
 }
 
 impl WebsocketConnection {
@@ -121,6 +123,7 @@ impl WebsocketConnection {
         stdin: Vec<u8>,
         column_options: transformers::Options,
         row_options: transformers::Options,
+        shutdown_channel: mpsc::Sender<()>,
     ) -> Self {
         Self {
             stdin,
@@ -128,6 +131,7 @@ impl WebsocketConnection {
             row_options,
             last_seen_heartbeat: Instant::now(),
             continuation_frame: None,
+            shutdown_channel,
         }
     }
 
@@ -616,12 +620,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
-                System::current().stop();
+                // We genuinely have no way to handle the error here.
+                self.shutdown_channel.send(()).unwrap();
             }
             Err(error) => {
                 log::error!("{}", error);
                 ctx.close(Some(CloseReason::from(CloseCode::Error)));
                 ctx.stop();
+                // We genuinely have no way to handle the error here.
+                self.shutdown_channel.send(()).unwrap();
             }
         }
     }
