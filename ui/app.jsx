@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import copy from 'copy-to-clipboard';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import {
@@ -452,7 +453,7 @@ const TableRow = ({ row }) => {
       onMouseLeave={(_event) => setIsHovered(false)}
     >
       {row.map((cell, i) => (
-        <td key={`${cell}:${i}`}>
+        <td key={`${cell}:${i}`} onClick={(_event) => copy(cell)}>
           {cell}
         </td>
       ))}
