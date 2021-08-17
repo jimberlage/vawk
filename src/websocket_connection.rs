@@ -23,7 +23,7 @@ use actix_web_actors::ws;
 use bytes::{Bytes, BytesMut};
 use protobuf::{Message as ProtobufMessage, ProtobufError};
 use std::fmt;
-use std::io;
+use std::io::{self, Write};
 use std::time::{Duration, Instant};
 use std::sync::mpsc;
 
@@ -620,13 +620,40 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
+
+                // TODO: Consider moving to a method as this is duplicated below
+                match transformers::transform_output(&self.column_options, &self.row_options, &self.stdin) {
+                    Err(error) => {
+                        log::error!("Could not transform the data into a CSV when closing:\n{}", error);
+                    }
+                    Ok(csv) => {
+                        if let Err(error) = io::stdout().write_all(csv.as_slice()) {
+                            log::error!("Could not write the data to stdout when closing:\n{}", error);
+                        }
+                    }
+                }
+
                 // We genuinely have no way to handle the error here.
                 self.shutdown_channel.send(()).unwrap();
             }
             Err(error) => {
                 log::error!("{}", error);
+
                 ctx.close(Some(CloseReason::from(CloseCode::Error)));
                 ctx.stop();
+
+                // TODO: Consider moving to a method as this is duplicated above
+                match transformers::transform_output(&self.column_options, &self.row_options, &self.stdin) {
+                    Err(error) => {
+                        log::error!("Could not transform the data into a CSV when closing:\n{}", error);
+                    }
+                    Ok(csv) => {
+                        if let Err(error) = io::stdout().write_all(csv.as_slice()) {
+                            log::error!("Could not write the data to stdout when closing:\n{}", error);
+                        }
+                    }
+                }
+
                 // We genuinely have no way to handle the error here.
                 self.shutdown_channel.send(()).unwrap();
             }
