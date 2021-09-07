@@ -1,6 +1,6 @@
 {
   "name": "@jimberlage/vawk",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "devDependencies": {
     "autoprefixer": "^10.3.1",
     "esbuild": "^0.12.15",

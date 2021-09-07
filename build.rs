@@ -53,7 +53,7 @@ fn check_for_dependencies() -> Result<(), DependencyCheckError> {
             "Follow the instructions at https://nodejs.org/ to install node and NPM".to_owned(),
     });
     maybe_missing_dependencies.push(MissingDependency {
-        binary: "npx".to_owned(),
+        binary: "node".to_owned(),
         additional_information:
             "Follow the instructions at https://nodejs.org/ to install node and NPM".to_owned(),
     });
