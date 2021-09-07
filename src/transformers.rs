@@ -114,7 +114,7 @@ fn keep_regex_matches(regex: &Regex, data: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn keep_matches(options: &Options, data: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+fn keep_matches(options: &Options, data: &Vec<Vec<u8>>) -> Vec<(usize, Vec<u8>)> {
     let mut result = vec![];
 
     for i in 0..data.len() {
@@ -137,21 +137,26 @@ fn keep_matches(options: &Options, data: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
         };
 
         if should_keep {
-            result.push(data[i].clone());
+            result.push((i, data[i].clone()));
         }
     }
 
     result
 }
 
-fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
+fn split_into_columns(options: &Options, data: &Vec<u8>) -> Vec<(usize, Vec<u8>)> {
     keep_matches(options, &split_all(options, data))
+}
+
+fn split_into_records(options: &Options, data: &Vec<u8>) -> Vec<Vec<u8>> {
+    keep_matches(options, &split_all(options, data)).into_iter().map(|(_, row_data)| row_data).collect()
 }
 
 pub fn transform_output(
     column_options: &Options,
     row_options: &Options,
     data: &Vec<u8>,
+    has_headers: bool,
 ) -> io::Result<Vec<u8>> {
     let mut inner = vec![];
     {
@@ -159,17 +164,44 @@ pub fn transform_output(
         let mut writer = csv::WriterBuilder::new()
             .has_headers(false)
             .from_writer(&mut inner);
-        let rows: Vec<Vec<Vec<u8>>> = split_into_records(row_options, data)
+        let rows_with_indices: Vec<Vec<(usize, Vec<u8>)>> = split_into_records(row_options, data)
             .iter_mut()
-            .map(|row_data| split_into_records(column_options, row_data))
+            .map(|row_data| split_into_columns(column_options, row_data))
             .collect();
-        let mut longest_number_of_cells = 0;
 
-        for row in &rows {
-            if row.len() > longest_number_of_cells {
-                longest_number_of_cells = row.len();
+        let mut column_indices: Vec<usize> = vec![];
+        let mut rows = vec![];
+        for row_with_index in &rows_with_indices {
+            let mut row = vec![];
+
+            for (current_column_index, cell) in row_with_index {
+                // Add the index to the list of indices seen, if necessary.
+                // And pad middle sections of any rows.
+                if !column_indices.iter().any(|column_index| *column_index == *current_column_index) {
+                    if let Some(last_column_index) = column_indices.last() {
+                        for n in (last_column_index+1)..(*current_column_index) {
+                            column_indices.push(n+1);
+                            row.push(vec![]);
+                        }
+                    }
+
+                    column_indices.push((*current_column_index)+1);
+                }
+
+                // Regardless, add the current cell to the row.
+                row.push(cell.to_vec());
             }
+
+            rows.push(row);
         }
+
+        if has_headers && !column_indices.is_empty() {
+            writer.write_record(column_indices.iter().map(|i| i.to_string()).collect::<Vec<String>>())?;
+        }
+
+        dbg!(column_indices.clone());
+
+        let longest_number_of_cells = column_indices.last().map(|n| *n).unwrap_or(0);
 
         for mut row in rows {
             // Pad cells so the UI doesn't have to.

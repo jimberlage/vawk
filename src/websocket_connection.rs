@@ -160,7 +160,7 @@ impl WebsocketConnection {
         ctx: &mut ws::WebsocketContext<WebsocketConnection>,
     ) -> Result<(), SendCSVError> {
         let transformed =
-            transformers::transform_output(&self.column_options, &self.row_options, &self.stdin)
+            transformers::transform_output(&self.column_options, &self.row_options, &self.stdin, true)
                 .map_err(|error| SendCSVError::TransformError(error))?;
 
         let mut output_response = FromServer::default();
@@ -622,7 +622,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
                 ctx.stop();
 
                 // TODO: Consider moving to a method as this is duplicated below
-                match transformers::transform_output(&self.column_options, &self.row_options, &self.stdin) {
+                match transformers::transform_output(&self.column_options, &self.row_options, &self.stdin, false) {
                     Err(error) => {
                         log::error!("Could not transform the data into a CSV when closing:\n{}", error);
                     }
@@ -643,7 +643,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketConnecti
                 ctx.stop();
 
                 // TODO: Consider moving to a method as this is duplicated above
-                match transformers::transform_output(&self.column_options, &self.row_options, &self.stdin) {
+                match transformers::transform_output(&self.column_options, &self.row_options, &self.stdin, false) {
                     Err(error) => {
                         log::error!("Could not transform the data into a CSV when closing:\n{}", error);
                     }
