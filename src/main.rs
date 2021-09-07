@@ -148,7 +148,7 @@ async fn main() {
     env_logger::init();
 
     let matches = App::new("VAWK (Visual AWK)")
-        .version("1.5.0")
+        .version("1.6.0")
         .author("Jim Berlage <jamesberlage@gmail.com>")
         .about("Allows users to view process output as a spreadsheet.")
         .arg(

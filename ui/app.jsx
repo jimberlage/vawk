@@ -484,6 +484,12 @@ const Table = ({ rows }) => (
   </div>
 );
 
+const NoDataMessage = (_) => (
+  <div className='flex flex-1 p-4 items-center justify-center'>
+    <h1>No data loaded (yet...)</h1>
+  </div>
+);
+
 const bytesDecoder = new TextDecoder();
 
 const handleMessage = async (messageEvent, setRows) => {
@@ -573,19 +579,27 @@ const App = () => {
   // TODO: Only show the table when the connection is ready.
   return (
     <div className='flex flex-row flex-1'>
-      <Table rows={rows} />
-      <div className='flex w-8' />
-      <Sidebar
-        connection={connection}
-        defaultRowSeparators={defaultRowSeparators}
-        defaultRowSeparatorRegex={defaultRowSeparatorRegex}
-        defaultRowFilterCombination={defaultRowFilterCombination}
-        defaultRowIndexFilters={defaultRowIndexFilters}
-        defaultRowRegexFilter={defaultRowRegexFilter}
-        defaultColumnSeparators={defaultColumnSeparators}
-        defaultColumnSeparatorRegex={defaultColumnSeparatorRegex}
-        defaultColumnIndexFilters={defaultColumnIndexFilters}
-      />
+      {rows && rows.length > 0 ? (
+        <Table rows={rows} />
+      ) : (
+        <NoDataMessage />
+      )}
+      {connection ? (
+        <>
+          <div className='flex w-8' />
+          <Sidebar
+            connection={connection}
+            defaultRowSeparators={defaultRowSeparators}
+            defaultRowSeparatorRegex={defaultRowSeparatorRegex}
+            defaultRowFilterCombination={defaultRowFilterCombination}
+            defaultRowIndexFilters={defaultRowIndexFilters}
+            defaultRowRegexFilter={defaultRowRegexFilter}
+            defaultColumnSeparators={defaultColumnSeparators}
+            defaultColumnSeparatorRegex={defaultColumnSeparatorRegex}
+            defaultColumnIndexFilters={defaultColumnIndexFilters}
+          />
+        </>
+      ): null}
     </div>
   );
 };
